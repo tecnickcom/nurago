@@ -761,22 +761,20 @@ func (re *Redactor) hasSensitiveRootSuffix(tok string) bool {
 // rule redacts `{"name":"DB_PASSWORD",...}` / `{"name":"api_key",...}` without
 // blanking ordinary `{"name":"cardType"|"payment"|"account",...}` data.
 func (re *Redactor) isStrongSecretName(key []byte) bool {
-	normalized := normalizeKey(string(key))
-	start := 0
+	rest := normalizeKey(string(key))
 
-	for i := 0; i <= len(normalized); i++ {
-		if i < len(normalized) && normalized[i] != '_' {
-			continue
-		}
-
-		if i > start && re.isStrongSecretToken(normalized[start:i]) {
+	for {
+		tok, remainder, found := strings.Cut(rest, "_")
+		if tok != "" && re.isStrongSecretToken(tok) {
 			return true
 		}
 
-		start = i + 1
-	}
+		if !found {
+			return false
+		}
 
-	return false
+		rest = remainder
+	}
 }
 
 // isStrongSecretToken reports whether a single normalized token is a strong
@@ -828,31 +826,27 @@ func (re *Redactor) isSensitiveNormalizedKeyTokens(normalized string) bool {
 		return false
 	}
 
-	start := 0
-	prevStart := -1
-	prevEnd := -1
+	rest := normalized
+	prev := ""
 
-	for i := 0; i <= len(normalized); i++ {
-		if i < len(normalized) && normalized[i] != '_' {
-			continue
-		}
-
-		if i > start {
-			tok := normalized[start:i]
+	for {
+		tok, remainder, found := strings.Cut(rest, "_")
+		if tok != "" {
 			if re.sensitiveToken(tok) {
 				return true
 			}
 
-			if prevStart >= 0 && matchesPairString(normalized[prevStart:prevEnd], tok) {
+			if prev != "" && matchesPairString(prev, tok) {
 				return true
 			}
 
-			prevStart = start
-			prevEnd = i
+			prev = tok
 		}
 
-		start = i + 1
-	}
+		if !found {
+			return false
+		}
 
-	return false
+		rest = remainder
+	}
 }
