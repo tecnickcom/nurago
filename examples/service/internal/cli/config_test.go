@@ -25,15 +25,13 @@ func Test_appConfig_SetDefaults(t *testing.T) {
 
 func getValidTestConfig() appConfig {
 	return appConfig{
-		BaseConfig: config.BaseConfig{
-			Log: config.LogConfig{
-				Level:   "DEBUG",
-				Format:  "CONSOLE",
-				Network: "tcp",
-				Address: "127.0.0.1:1234",
-			},
-			ShutdownTimeout: 2,
+		Log: config.LogConfig{
+			Level:   "DEBUG",
+			Format:  "CONSOLE",
+			Network: "tcp",
+			Address: "127.0.0.1:1234",
 		},
+		ShutdownTimeout: 2,
 		Clients: cfgClients{
 			Ipify: cfgClientIpify{
 				Address: "https://test.ipify.url.invalid",

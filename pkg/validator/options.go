@@ -21,7 +21,7 @@ func WithFieldNameTag(tag string) Option {
 		}
 
 		v.v.RegisterTagNameFunc(func(fld reflect.StructField) string {
-			name := strings.SplitN(fld.Tag.Get(tag), ",", 2)[0]
+			name, _, _ := strings.Cut(fld.Tag.Get(tag), ",")
 			if name == "-" {
 				return ""
 			}

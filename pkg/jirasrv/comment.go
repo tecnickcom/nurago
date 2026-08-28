@@ -5,16 +5,16 @@ import "github.com/tecnickcom/nurago/pkg/timeutil"
 // Comment models a Jira issue comment payload.
 // Ref.: https://docs.atlassian.com/software/jira/docs/api/REST/9.17.0
 type Comment struct {
-	Self         string                               `json:"self"`
-	ID           string                               `json:"id"`
-	Author       *User                                `json:"author,omitempty"`
-	Body         string                               `json:"body"`
-	RenderedBody string                               `json:"renderedBody,omitempty"`
-	UpdateAuthor *User                                `json:"updateAuthor,omitempty"`
-	Created      *(timeutil.DateTime[timeutil.TJira]) `json:"created"`
-	Updated      *(timeutil.DateTime[timeutil.TJira]) `json:"updated"`
-	Visibility   *Visibility                          `json:"visibility,omitempty"`
-	Properties   []EntityProperty                     `json:"properties,omitempty"`
+	Self         string                             `json:"self"`
+	ID           string                             `json:"id"`
+	Author       *User                              `json:"author,omitempty"`
+	Body         string                             `json:"body"`
+	RenderedBody string                             `json:"renderedBody,omitempty"`
+	UpdateAuthor *User                              `json:"updateAuthor,omitempty"`
+	Created      *timeutil.DateTime[timeutil.TJira] `json:"created"`
+	Updated      *timeutil.DateTime[timeutil.TJira] `json:"updated"`
+	Visibility   *Visibility                        `json:"visibility,omitempty"`
+	Properties   []EntityProperty                   `json:"properties,omitempty"`
 }
 
 // User describes a Jira account reference returned by comment endpoints.

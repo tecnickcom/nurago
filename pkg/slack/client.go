@@ -133,8 +133,7 @@ func parseWebhookAddr(addr string) (*url.URL, error) {
 	if err != nil {
 		reason := err
 
-		var uerr *url.Error
-		if errors.As(err, &uerr) {
+		if uerr, ok := errors.AsType[*url.Error](err); ok {
 			reason = uerr.Err
 		}
 

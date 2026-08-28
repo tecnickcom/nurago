@@ -155,7 +155,7 @@ This scaffolds a new web service from the provided configuration.
 
 Requirements:
 
-- Go (latest stable; repository is configured for Go 1.26)
+- Go (latest stable; repository is configured for Go 1.27)
 - Python 3 (required for additional tests)
 
 Clone and validate the repository:

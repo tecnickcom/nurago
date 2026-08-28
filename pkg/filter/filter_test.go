@@ -813,14 +813,10 @@ func TestFilter_Apply(t *testing.T) {
 			name: "success - with embedding struct",
 			elements: &[]embeddingStruct{
 				{
-					simpleStruct: simpleStruct{
-						StringField: "value 1",
-					},
+					StringField: "value 1",
 				},
 				{
-					simpleStruct: simpleStruct{
-						StringField: "value 2",
-					},
+					StringField: "value 2",
 				},
 			},
 			rules: [][]Rule{{{
@@ -830,9 +826,7 @@ func TestFilter_Apply(t *testing.T) {
 			}}},
 			want: &[]embeddingStruct{
 				{
-					simpleStruct: simpleStruct{
-						StringField: "value 1",
-					},
+					StringField: "value 1",
 				},
 			},
 			wantTotalMatches: 1,
@@ -841,14 +835,10 @@ func TestFilter_Apply(t *testing.T) {
 			name: "success - with embedding struct and field tags",
 			elements: &[]embeddingStruct{
 				{
-					simpleStruct: simpleStruct{
-						StringField: "value 1",
-					},
+					StringField: "value 1",
 				},
 				{
-					simpleStruct: simpleStruct{
-						StringField: "value 2",
-					},
+					StringField: "value 2",
 				},
 			},
 			opts: []Option{
@@ -861,9 +851,7 @@ func TestFilter_Apply(t *testing.T) {
 			}}},
 			want: &[]embeddingStruct{
 				{
-					simpleStruct: simpleStruct{
-						StringField: "value 1",
-					},
+					StringField: "value 1",
 				},
 			},
 			wantTotalMatches: 1,

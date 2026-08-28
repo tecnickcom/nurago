@@ -322,8 +322,7 @@ func loadLocalConfig(v Viper, cmdName, configDir, envPrefix string, cfg Configur
 	// (e.g. the "envvar" provider for fully file-less deployments).
 	err := v.ReadInConfig()
 	if err != nil {
-		var nfErr viper.ConfigFileNotFoundError
-		if !errors.As(err, &nfErr) {
+		if _, ok := errors.AsType[viper.ConfigFileNotFoundError](err); !ok {
 			return nil, fmt.Errorf("failed reading in config: %w", err)
 		}
 	}

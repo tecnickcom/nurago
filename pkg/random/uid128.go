@@ -17,7 +17,7 @@ type TUID128 struct {
 // UID128 generates a 128-bit unique identifier with high 64 bits from current time and low 64 bits random.
 func (r *Rnd) UID128() TUID128 {
 	return TUID128{
-		t: (uint64)(time.Now().UnixNano()),
+		t: uint64(time.Now().UnixNano()),
 		r: r.RandUint64(),
 	}
 }

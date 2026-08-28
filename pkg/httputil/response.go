@@ -50,8 +50,6 @@ var ErrInvalidStatus = errors.New("invalid JSend status")
 // The value-receiver String/MarshalJSON and pointer-receiver UnmarshalJSON mix is
 // required: UnmarshalJSON must mutate the receiver, while String/MarshalJSON must
 // work on non-addressable values.
-//
-//nolint:recvcheck
 type Status int
 
 // String projects the HTTP status code onto a JSend status string:

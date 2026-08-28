@@ -415,7 +415,7 @@ func TestClient_ForwardRequest_CustomDirector(t *testing.T) {
 	require.NoError(t, err)
 
 	custom := &httputil.ReverseProxy{
-		Director: func(req *http.Request) {
+		Director: func(req *http.Request) { //nolint:staticcheck // SA1019: intentional deprecated-field test
 			req.URL.Scheme = tu.Scheme
 			req.URL.Host = tu.Host
 			req.URL.Path = "/test"

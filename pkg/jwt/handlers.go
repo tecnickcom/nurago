@@ -278,8 +278,7 @@ func (c *JWT) sendTokenResponse(w http.ResponseWriter, r *http.Request, claims *
 func (c *JWT) sendDecodeError(ctx context.Context, w http.ResponseWriter, err error) {
 	status, msg := http.StatusBadRequest, "invalid request body"
 
-	var maxErr *http.MaxBytesError
-	if errors.As(err, &maxErr) {
+	if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
 		status, msg = http.StatusRequestEntityTooLarge, "request body too large"
 	}
 

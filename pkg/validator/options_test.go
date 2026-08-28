@@ -79,7 +79,7 @@ func TestWithCustomValidationTags(t *testing.T) {
 }
 
 func ValidateValuer(field reflect.Value) any {
-	if valuer, ok := field.Interface().(driver.Valuer); ok {
+	if valuer, ok := reflect.TypeAssert[driver.Valuer](field); ok {
 		val, err := valuer.Value()
 		if err == nil {
 			return val

@@ -592,8 +592,7 @@ func (b *bodyReaderBinder) BindHTTP(_ context.Context) []Route {
 			Handler: func(w http.ResponseWriter, r *http.Request) {
 				data, err := io.ReadAll(r.Body)
 				if err != nil {
-					var maxErr *http.MaxBytesError
-					if errors.As(err, &maxErr) {
+					if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
 						w.WriteHeader(http.StatusRequestEntityTooLarge)
 						return
 					}

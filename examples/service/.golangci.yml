@@ -12,6 +12,7 @@ linters:
     - depguard
     - err113
     - exhaustruct
+    - exhaustruct_v5
     - goconst
     - gomoddirectives
     - gomodguard
