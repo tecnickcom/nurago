@@ -124,9 +124,9 @@ Importing this package pulls 12 external modules:
 - `github.com/spf13/pflag`
 - `github.com/spf13/viper`
 - `github.com/subosito/gotenv`
+- `go.yaml.in/yaml/v3`
 - `golang.org/x/sys`
 - `golang.org/x/text`
-- `go.yaml.in/yaml/v3`
 
 ## Links
 

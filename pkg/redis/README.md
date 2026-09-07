@@ -147,8 +147,8 @@ Importing this package pulls 4 external modules:
 
 - `github.com/cespare/xxhash/v2`
 - `github.com/redis/go-redis/v9`
-- `golang.org/x/sys`
 - `go.uber.org/atomic`
+- `golang.org/x/sys`
 
 ## Links
 

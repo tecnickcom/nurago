@@ -108,6 +108,7 @@ More runnable examples are on [pkg.go.dev](https://pkg.go.dev/github.com/tecnick
 
 Importing this package pulls 28 external modules:
 
+- `github.com/XSAM/otelsql`
 - `github.com/cenkalti/backoff/v5`
 - `github.com/cespare/xxhash/v2`
 - `github.com/felixge/httpsnoop`
@@ -115,14 +116,6 @@ Importing this package pulls 28 external modules:
 - `github.com/go-logr/stdr`
 - `github.com/google/uuid`
 - `github.com/grpc-ecosystem/grpc-gateway/v2`
-- `github.com/XSAM/otelsql`
-- `golang.org/x/net`
-- `golang.org/x/sys`
-- `golang.org/x/text`
-- `google.golang.org/genproto/googleapis/api`
-- `google.golang.org/genproto/googleapis/rpc`
-- `google.golang.org/grpc`
-- `google.golang.org/protobuf`
 - `go.opentelemetry.io/auto/sdk`
 - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
 - `go.opentelemetry.io/otel`
@@ -136,6 +129,13 @@ Importing this package pulls 28 external modules:
 - `go.opentelemetry.io/otel/sdk/metric`
 - `go.opentelemetry.io/otel/trace`
 - `go.opentelemetry.io/proto/otlp`
+- `golang.org/x/net`
+- `golang.org/x/sys`
+- `golang.org/x/text`
+- `google.golang.org/genproto/googleapis/api`
+- `google.golang.org/genproto/googleapis/rpc`
+- `google.golang.org/grpc`
+- `google.golang.org/protobuf`
 
 ## Links
 

@@ -10,6 +10,10 @@ set -euo pipefail
 
 MODULE="github.com/tecnickcom/nurago"
 
+# Byte ordering for every sort: the output must not depend on the locale.
+unset LC_ALL
+export LC_COLLATE=C
+
 for dir in $(go list -f '{{.Dir}}' ./pkg/... | sed "s|^$PWD/||" | sort); do
 	name="${dir##*/}"
 	imp="$MODULE/$dir"
