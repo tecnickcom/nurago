@@ -14,13 +14,18 @@ permissions:
 jobs:
   example-lint:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Latest patch release of each supported Go minor version.
+        go: ['1.26.x', '1.27.x']
     steps:
       - name: checkout repository
         uses: actions/checkout@v7
       - name: setup go build environment
         uses: actions/setup-go@v7
         with:
-          go-version-file: 'go.mod'
+          go-version: ${{ matrix.go }}
           check-latest: true
           cache: true
       - name: linter
@@ -30,13 +35,17 @@ jobs:
 
   example-test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go: ['1.26.x', '1.27.x']
     steps:
       - name: checkout repository
         uses: actions/checkout@v7
       - name: setup go build environment
         uses: actions/setup-go@v7
         with:
-          go-version-file: 'go.mod'
+          go-version: ${{ matrix.go }}
           check-latest: true
           cache: true
       - name: unit tests
@@ -50,7 +59,9 @@ jobs:
       - name: setup go build environment
         uses: actions/setup-go@v7
         with:
-          go-version-file: 'go.mod'
+          # Matches the base image in resources/docker/Dockerfile.dev, which
+          # compiles the container build.
+          go-version: '1.27.x'
           check-latest: true
           cache: true
       - name: set RELEASE number
