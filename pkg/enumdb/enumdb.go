@@ -21,6 +21,12 @@ Example of a MySQL database table that can be used with this package:
 	  UNIQUE INDEX `name_UNIQUE` (`name` ASC))
 	ENGINE = InnoDB
 	COMMENT = 'Example enumeration table';
+
+# When To Use
+
+  - Reference tables hold (id, name) rows that never change during a
+    process's lifetime.
+  - You want lookups to avoid the database entirely after startup.
 */
 package enumdb
 

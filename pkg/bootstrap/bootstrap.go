@@ -67,6 +67,13 @@ For a complete, runnable implementation see, in order:
   - examples/service/cmd/main.go
   - examples/service/internal/cli/cli.go
   - examples/service/internal/cli/bind.go
+
+# When To Use
+
+  - A service's main should be short and the lifecycle wiring consistent
+    across services.
+  - Shutdown must wait for background workers, bounded by a timeout.
+  - Log records should increment a metrics counter per level.
 */
 package bootstrap
 

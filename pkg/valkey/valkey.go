@@ -81,5 +81,12 @@ To swap in an encrypted codec, supply custom functions at construction time:
 	    valkey.WithMessageEncodeFunc(myEncryptAndEncode),
 	    valkey.WithMessageDecodeFunc(myDecryptAndDecode),
 	)
+
+# When To Use
+
+  - You run Valkey rather than Redis and want the same shape of API as
+    [github.com/tecnickcom/nurago/pkg/redis].
+  - Structs should round-trip without hand-written encoding at each call
+    site.
 */
 package valkey

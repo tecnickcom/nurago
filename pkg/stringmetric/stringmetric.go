@@ -50,6 +50,11 @@ row, so the two-row optimization used for plain Levenshtein does not apply.
 	if d <= 2 {
 	    // treat as likely typo match
 	}
+
+# When To Use
+
+  - Search results are ranked by closeness rather than exact match.
+  - Typos in user input should still find the intended record.
 */
 package stringmetric
 

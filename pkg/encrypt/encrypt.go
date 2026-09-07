@@ -1,6 +1,6 @@
 /*
-Package encrypt provides helpers for encrypting and decrypting data safely for
-transport and storage.
+Package encrypt encrypts and decrypts data for transport and storage using
+AES-GCM authenticated encryption.
 
 It protects application payloads moving between systems such as databases,
 queues, caches, or external services.
@@ -29,6 +29,11 @@ that serialize arbitrary values with gob or JSON before encryption.
     not URL- or filename-safe. Re-encode at the call site if you need to embed the
     payload in a URL or path.
   - All exported functions are stateless and safe for concurrent use.
+
+# When To Use
+
+  - A field must be encrypted before it reaches the database or a queue.
+  - You want authenticated encryption without assembling the pieces yourself.
 */
 package encrypt
 

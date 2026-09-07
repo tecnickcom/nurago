@@ -50,6 +50,14 @@ ones):
 For a complete implementation example, see the Configuration implementation in
 examples/service/internal/cli/config.go and the Load call in
 examples/service/internal/cli/cli.go
+
+# When To Use
+
+  - Configuration comes from several layers with a defined precedence.
+  - The same binary runs locally, in CI, and in production with different
+    sources.
+  - The fully merged configuration should be validated before the service
+    starts.
 */
 package config
 

@@ -57,6 +57,13 @@ group so a central signal closes every pool and the process waits for them.
 	if err != nil {
 	    return err
 	}
+
+# When To Use
+
+  - Pool limits, a connectivity check, a health probe, and shutdown handling
+    all belong in one place.
+  - The connection must close cleanly when the service receives a shutdown
+    signal.
 */
 package sqlconn
 

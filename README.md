@@ -1,7 +1,7 @@
 # nurago
 
 > [!IMPORTANT]
-> **This project was previously named [gogen](https://github.com/tecnickcom/gogen)** — same library, same packages, new name. The old `github.com/tecnickcom/gogen` module path is **deprecated**; all existing versions remain available via the Go module proxy. To migrate:
+> **This project was previously named [gogen](https://github.com/tecnickcom/gogen)**: same library, same packages, new name. The old `github.com/tecnickcom/gogen` module path is **deprecated**; all existing versions remain available via the Go module proxy. To migrate:
 >
 > ```bash
 > go get github.com/tecnickcom/nurago@latest
@@ -17,146 +17,176 @@
 
 If this project is useful to you, please consider [supporting development via GitHub Sponsors](https://github.com/sponsors/tecnickcom).
 
-**`nurago` is a production-oriented collection of modular, reusable Go packages for building services and infrastructure code.**
+**`nurago` is a collection of independent Go packages for building backend services**: retries and exponential backoff, HTTP client and server, OpenTelemetry and Prometheus instrumentation, structured logging and log redaction, Argon2id password hashing, JWT, Redis, Valkey, Kafka, AWS S3 and SQS, SQL connection and transaction handling, caching, validation, and configuration loading.
 
-It solves a common problem in backend teams: repeatedly re-implementing the same foundational components (configuration loading, retries, health checks, logging, metrics, AWS integration, validation, caching, and more) across multiple repositories.
+Each package is imported on its own and pulls only the dependencies it reaches, so adopting one does not commit you to the rest. Most reach none at all: see [Dependency Footprint](#dependency-footprint).
 
-Instead of assembling and maintaining ad-hoc helpers per project, you can adopt tested packages with consistent patterns.
-
-*Why "nurago"?* From *nuraghe* + Go: the Bronze Age Sardinian stone towers, built without mortar, ~7,000 of which still stand after 3,500 years — modular, stone-solid foundations with no lock-in, which is exactly what this library aims to be.
+*Why "nurago"?* From *nuraghe* + Go: the Bronze Age Sardinian stone towers, built without mortar, around 7,000 of which still stand after 3,500 years.
 
 Source documentation: [pkg.go.dev/github.com/tecnickcom/nurago](https://pkg.go.dev/github.com/tecnickcom/nurago)
 
 ## Table of Contents
 
-1. [Why nurago](#why-nurago)
-2. [Feature Highlights](#feature-highlights)
-3. [Benefits Summary](#benefits-summary)
+1. [Installation](#installation)
+2. [Dependency Footprint](#dependency-footprint)
+3. [API Stability](#api-stability)
 4. [Package Catalog](#package-catalog)
 5. [Developers Quick Start](#developers-quick-start)
 6. [Running All Tests](#running-all-tests)
 7. [How To Create a New Web Service](#how-to-create-a-new-web-service)
 8. [Contributing](#contributing)
 
-## Why nurago
+## Installation
 
-`nurago` is a good fit for Go teams that want:
+```bash
+go get github.com/tecnickcom/nurago
+```
 
-- A consistent utility layer across services
-- Reusable packages rather than project-specific scripts
-- A modular import model without framework lock-in
-- A practical example service to accelerate onboarding
-- A Makefile-driven workflow for test/build/scaffolding
+Import the packages you need, individually:
 
-It also includes a generator path:
+```go
+import (
+    "github.com/tecnickcom/nurago/pkg/backoff"
+    "github.com/tecnickcom/nurago/pkg/redact"
+)
+```
+
+Every package directory has its own `README.md` with a runnable example and
+guidance on when the package is the right choice.
+
+The repository also includes a generator path that scaffolds a complete web
+service from a configuration file:
 
 ```bash
 make project CONFIG=project.cfg
 ```
 
-This scaffolds a new web service from the provided configuration.
+## Dependency Footprint
 
-## Feature Highlights
+Packages are imported individually and pull only what they reach. Importing
+`pkg/backoff` does not add the AWS SDK, Kafka, Redis, or OpenTelemetry to your
+build, even though other packages in this module require them. `go mod tidy`
+keeps only the modules your imports actually reach.
 
-- Broad package coverage for day-to-day service needs, reducing dependency sprawl and avoiding repeated boilerplate utility code.
+<!-- gendoc:deps:start -->
 
-- Production-focused building blocks for HTTP, retries, observability, data stores, and AWS, helping teams ship services faster with less glue code.
+**40 of the 70 packages reach no external module at all**, using nothing
+beyond the Go standard library:
 
-- Consistent conventions across packages that make code reviews easier, maintenance simpler, and APIs more predictable.
+`backoff`, `countrycode`, `countryphone`, `decint`, `dnscache`, `encode`,
+`encrypt`, `enumbitmap`, `enumcache`, `enumdb`, `errutil`, `filter`,
+`httpclient`, `httpretrier`, `ipify`, `logutil`, `maputil`, `metrics`,
+`mysqllock`, `numtrie`, `paging`, `periodic`, `phonekeypad`, `random`,
+`redact`, `retrier`, `sfcache`, `sliceutil`, `sqlconn`, `sqltransaction`,
+`sqlutil`, `stringmetric`, `strsplit`, `threadsafe`, `timeutil`, `traceid`,
+`tsmap`, `tsslice`, `typeutil`, `uhex`.
 
-- A testing-first repository culture that supports safer refactoring and more reliable behavior over time.
+Each package README lists its own footprint. Verify any of them with:
 
-- Built-in project scaffolding and a runnable example service to speed up project bootstrap and provide a clearer implementation reference.
+```bash
+go list -deps -f '{{if .Module}}{{.Module.Path}}{{end}}' \
+  github.com/tecnickcom/nurago/pkg/backoff | sort -u
+```
 
-## Benefits Summary
+<!-- gendoc:deps:end -->
 
-- Faster development cycles for new services
-- Less duplicated utility code across repositories
-- Better consistency in operational concerns (logging, metrics, health, tracing)
-- Cleaner architecture through package-level composition
-- Easier onboarding for engineers joining an existing Go platform
+## API Stability
+
+`nurago` follows [semantic versioning](https://semver.org/). The module is at
+v1 and the exported API of every `pkg/` package is stable: no breaking change
+will be made to an exported symbol within v1. Additions are released as minor
+versions, fixes as patch versions, and any breaking change would require a v2
+module path.
+
+The release cadence is frequent because dependency updates and additive changes
+ship as soon as they are ready. A high patch number does not indicate churn in
+the API.
 
 ## Package Catalog
 
-`nurago` offers a comprehensive set of well-tested packages.
+<!-- gendoc:catalog:start -->
 
-- [awsopt](pkg/awsopt) - Utilities for configuring common AWS options with the aws-sdk-go-v2 library. `aws`, `configuration`
-- [awssecretcache](pkg/awssecretcache) - Client for retrieving and caching secrets from AWS Secrets Manager. `aws`, `secrets`, `caching`
-- [backoff](pkg/backoff) - Exponential backoff delay schedule with jitter. `retry`, `backoff`, `jitter`
-- [bootstrap](pkg/bootstrap) - Helpers for application bootstrap and initialization. `bootstrap`, `initialization`
-- [config](pkg/config) - Utilities for configuration loading and management. `configuration`
-- [countrycode](pkg/countrycode) - Functions for country code lookup and validation. `geolocation`, `validation`
-- [countryphone](pkg/countryphone) - Phone number parsing and country association. `phone`, `geolocation`, `parsing`
-- [decint](pkg/decint) - Helpers for parsing and formatting decimal integers. `numeric`, `formatting`, `parsing`
-- [devlake](pkg/devlake) - Client for the DevLake Webhook API. `webhook`, `api client`
-- [dnscache](pkg/dnscache) - DNS resolution with caching support. `dns`, `caching`, `networking`
-- [encode](pkg/encode) - Utilities for data encoding and serialization. `encoding`, `serialization`
-- [encrypt](pkg/encrypt) - Helpers for encryption and decryption. `encryption`, `security`
-- [enumbitmap](pkg/enumbitmap) - Encode and decode slices of enumeration strings as integer bitmap values. `enum`, `bitmap`, `encoding`
-- [enumcache](pkg/enumcache) - Caching for enumeration values with bitmap support. `enum`, `caching`
-- [enumdb](pkg/enumdb) - Helpers for storing and retrieving enumeration sets in databases. `enum`, `database`
-- [errutil](pkg/errutil) - Error utility functions, including error tracing. `error handling`, `utilities`
-- [filter](pkg/filter) - Generic rule-based filtering for in-memory slices (of structs, scalars, or any). `filtering`, `collections`
-- [healthcheck](pkg/healthcheck) - Health check endpoints and logic. `health`, `monitoring`
-- [httpclient](pkg/httpclient) - HTTP client with enhanced features. `http`, `client`
-- [httpretrier](pkg/httpretrier) - HTTP request retry logic. `http`, `retry`
-- [httpreverseproxy](pkg/httpreverseproxy) - HTTP reverse proxy implementation. `http`, `reverse proxy`
-- [httpserver](pkg/httpserver) - HTTP server setup and management. `http`, `server`
-- [httputil](pkg/httputil) - HTTP utility functions. `http`, `utilities`
-- [jsendx](pkg/httputil/jsendx) - Helpers for JSend-compliant responses. `http`, `response formatting`
-- [ipify](pkg/ipify) - IP address lookup using the ipify service. `ip lookup`, `networking`, `external service`
-- [jirasrv](pkg/jirasrv) - Client for Jira server APIs. `api client`, `integration`
-- [jwt](pkg/jwt) - JSON Web Token creation and validation. `jwt`, `authentication`, `security`
-- [kafka](pkg/kafka) - Kafka producer and consumer utilities. `kafka`, `messaging`
-- [logsrv](pkg/logsrv) - Default slog logger with zerolog handler. `logging`, `slog`, `zerolog`
-- [logutil](pkg/logutil) - General log utilities for log/slog integration. `logging`, `utilities`
-- [maputil](pkg/maputil) - Helpers for Go map manipulation. `map utilities`, `collections`
-- [metrics](pkg/metrics) - Metrics collection and reporting. `metrics`, `monitoring`
-- [opentel](pkg/metrics/opentel) - OpenTelemetry metrics exporter (includes tracing). `opentelemetry`, `metrics`, `tracing`
-- [prometheus](pkg/metrics/prometheus) - Prometheus metrics exporter. `prometheus`, `metrics`
-- [statsd](pkg/metrics/statsd) - StatsD metrics exporter. `statsd`, `metrics`
-- [mysqllock](pkg/mysqllock) - Distributed locking using MySQL. `mysql`, `locking`, `distributed`
-- [numtrie](pkg/numtrie) - Trie data structure for numeric keys with partial matching. `data structure`, `trie`
-- [paging](pkg/paging) - Helpers for data pagination. `pagination`, `utilities`
-- [passwordhash](pkg/passwordhash) - Password hashing and verification. `password hashing`, `security`, `argon2id`, `PHC`
-- [passwordpwned](pkg/passwordpwned) - Password breach checking via HaveIBeenPwned. `password breach`, `security`
-- [periodic](pkg/periodic) - Periodic task scheduling. `scheduling`, `tasks`
-- [phonekeypad](pkg/phonekeypad) - Phone keypad mapping utilities. `phone`, `mapping`, `utilities`
-- [profiling](pkg/profiling) - Application profiling tools. `profiling`, `performance`
-- [random](pkg/random) - Utilities for random data generation, including UUID. `random`, `utilities`
-- [redact](pkg/redact) - Fast single-pass redaction of secrets (headers, JSON, form data, DSNs, JWTs, PEM keys, card numbers) in logs and HTTP dumps. `redaction`, `privacy`
-- [redis](pkg/redis) - Redis client and utilities. `redis`, `database`, `caching`
-- [retrier](pkg/retrier) - Retry logic for operations. `retry`, `utilities`
-- [s3](pkg/s3) - Helpers for AWS S3 integration. `aws`, `s3`
-- [sfcache](pkg/sfcache) - Simple in-memory, thread-safe, fixed-size, single-flight cache for expensive lookups. `caching`, `thread-safe`, `single-flight`
-- [slack](pkg/slack) - Client for sending messages via the Slack API Webhook. `slack`, `webhook`, `messaging`
-- [sleuth](pkg/sleuth) - Client for the Sleuth.io API. `api client`, `integration`
-- [sliceutil](pkg/sliceutil) - Utilities for slice manipulation. `slice utilities`, `collections`
-- [sqlconn](pkg/sqlconn) - Helpers for SQL database connections. `sql`, `database`
-- [sqltransaction](pkg/sqltransaction) - SQL transaction management. `sql`, `transactions`
-- [sqlutil](pkg/sqlutil) - SQL utility functions. `sql`, `utilities`
-- [sqlxtransaction](pkg/sqlxtransaction) - Helpers for SQLX transactions. `sqlx`, `transactions`
-- [sqs](pkg/sqs) - Utilities for AWS SQS (Simple Queue Service) integration. `aws`, `sqs`, `messaging`
-- [stringkey](pkg/stringkey) - Create unique hash keys from multiple strings. `string keys`, `hashing`
-- [stringmetric](pkg/stringmetric) - String similarity and distance metrics. `text similarity`, `metrics`
-- [strsplit](pkg/strsplit) - Utilities to split strings and Unicode text. `string utilities`, `text`
-- [testutil](pkg/testutil) - Utilities for testing. `testing`, `utilities`
-- [threadsafe](pkg/threadsafe) - Thread-safe data structures. `thread-safe`, `concurrency`
-- [tsmap](pkg/threadsafe/tsmap) - Thread-safe map implementation. `thread-safe`, `map`
-- [tsslice](pkg/threadsafe/tsslice) - Thread-safe slice implementation. `thread-safe`, `slice`
-- [timeutil](pkg/timeutil) - Time and date utilities. `time`, `date utilities`
-- [traceid](pkg/traceid) - Trace ID propagation and context management. `tracing`, `ids`
-- [typeutil](pkg/typeutil) - Type conversion and utility functions. `type conversion`, `utilities`
-- [uhex](pkg/uhex) - Fixed-width, lowercase hexadecimal encoders for unsigned integers and byte arrays. `hex`, `encoding`, `utilities`
-- [validator](pkg/validator) - Data validation utilities. `validation`, `utilities`
-- [valkey](pkg/valkey) - Wrapper client for interacting with valkey.io, an open-source in-memory data store. `data store`, `client`
+All 70 packages, each linking to its own README. The description is the
+first sentence of the package documentation.
+
+- [awsopt](pkg/awsopt) - configures the aws-sdk-go-v2 library consistently across multiple AWS service clients. It centralizes config.LoadOptionsFunc calls into a composable Options slice that can be built once and handed to any AWS-based package in this library.
+- [awssecretcache](pkg/awssecretcache) - provides a local, thread-safe, fixed-size cache for AWS Secrets Manager lookups, with single-flight deduplication.
+- [backoff](pkg/backoff) - computes successive retry delays with exponential growth, a bounded maximum, and random jitter.
+- [bootstrap](pkg/bootstrap) - wires together the core infrastructure of a Go service: context lifecycle, structured logging, metrics collection, OS signal handling, and graceful shutdown, in a single function call.
+- [config](pkg/config) - provides configuration bootstrap for Go services built on top of Viper.
+- [countrycode](pkg/countrycode) - provides access to ISO-3166 country metadata.
+- [countryphone](pkg/countryphone) - resolves international phone number prefixes into country and regional metadata.
+- [decint](pkg/decint) - provides utility functions to parse and represent decimal values as fixed-point integers with a defined precision.
+- [devlake](pkg/devlake) - provides a Go client for the DevLake Webhook API.
+- [dnscache](pkg/dnscache) - provides a local DNS cache that is safe for concurrent use, bounded in size, and uses single-flight request collapsing to avoid duplicate lookups.
+- [encode](pkg/encode) - serializes and deserializes values crossing system boundaries such as databases, queues, caches, and RPC payloads.
+- [encrypt](pkg/encrypt) - encrypts and decrypts data for transport and storage using AES-GCM authenticated encryption.
+- [enumbitmap](pkg/enumbitmap) - encodes a set of enumeration values as an integer bitmap and decodes it back.
+- [enumcache](pkg/enumcache) - provides thread-safe storage and lookup for enumeration name and ID mappings.
+- [enumdb](pkg/enumdb) - loads enumeration sets from relational database tables into thread-safe enum caches.
+- [errutil](pkg/errutil) - annotates errors with caller location, joins cleanup failures onto an existing error, and enumerates the errors inside an errors.Join value.
+- [filter](pkg/filter) - provides declarative, rule-based filtering for in-memory slices. It evaluates structured Rule expressions against slice elements and filters the slice in place.
+- [healthcheck](pkg/healthcheck) - runs dependency probes concurrently and aggregates them into a single HTTP health endpoint.
+- [httpclient](pkg/httpclient) - provides a configurable outbound HTTP client with trace propagation and structured request/response logging.
+- [httpretrier](pkg/httpretrier) - provides configurable retry execution for outbound HTTP requests.
+- [httpreverseproxy](pkg/httpreverseproxy) - provides a reverse-proxy client built on top of net/http/httputil.ReverseProxy.
+- [httpserver](pkg/httpserver) - provides a configurable HTTP server bootstrap for Go services.
+- [httputil](pkg/httputil) - provides HTTP request/response primitives for Go services built on top of net/http.
+- [jsendx](pkg/httputil/jsendx) - implements an extended JSend response envelope for HTTP APIs.
+- [ipify](pkg/ipify) - provides a small client to resolve the current instance public IP address using the ipify service (https://www.ipify.org/).
+- [jirasrv](pkg/jirasrv) - provides a typed HTTP client foundation for Jira Server REST integrations.
+- [jwt](pkg/jwt) - provides an HTTP-oriented JWT authentication helper for username/password login flows: validate user credentials, issue short-lived signed JWTs, authorize protected endpoints from an Authorization header, and optionally renew tokens near expiration.
+- [kafka](pkg/kafka) - provides a pure-Go API for producing and consuming Apache Kafka messages. It requires no CGO and no system librdkafka installation.
+- [logsrv](pkg/logsrv) - provides a zerolog backend exposed through the standard log/slog API.
+- [logutil](pkg/logutil) - provides configuration-driven logging utilities built around Go's standard log/slog package.
+- [maputil](pkg/maputil) - filters, maps, reduces, and inverts Go maps with generic functions.
+- [metrics](pkg/metrics) - defines a backend-agnostic instrumentation contract for Go services.
+- [opentel](pkg/metrics/opentel) - implements github.com/tecnickcom/nurago/pkg/metrics.Client using OpenTelemetry for both metrics and tracing.
+- [prometheus](pkg/metrics/prometheus) - implements github.com/tecnickcom/nurago/pkg/metrics.Client using the Prometheus client ecosystem.
+- [statsd](pkg/metrics/statsd) - implements github.com/tecnickcom/nurago/pkg/metrics.Client using the StatsD protocol.
+- [mysqllock](pkg/mysqllock) - provides process-distributed mutual exclusion using MySQL's named lock primitives GET_LOCK and RELEASE_LOCK.
+- [numtrie](pkg/numtrie) - provides a generic, digit-indexed trie (prefix tree) for associating values of any type with numerical keys, with built-in support for partial/prefix matching and alphabetical (vanity) phone-number keys.
+- [paging](pkg/paging) - computes pagination metadata (current page, total pages, previous/next page numbers, and SQL OFFSET/LIMIT values) from three inputs: current page number, page size, and total item count.
+- [passwordhash](pkg/passwordhash) - provides OWASP-compliant password hashing and verification using the Argon2id algorithm (RFC 9106), with an optional AES-GCM encryption layer (peppered hashing) for defense in depth.
+- [passwordpwned](pkg/passwordpwned) - checks whether a password has appeared in a known data breach, using the Have I Been Pwned (HIBP) Pwned Passwords API v3 (https://haveibeenpwned.com/API/v3#PwnedPasswords).
+- [periodic](pkg/periodic) - schedules a task function to run repeatedly at a fixed interval, with optional random jitter and a per-invocation context timeout.
+- [phonekeypad](pkg/phonekeypad) - converts alphabetic strings and phone number literals to their numeric equivalents on a standard 12-key telephony keypad (ITU E.161 / ITU T.9).
+- [profiling](pkg/profiling) - bridges Go's built-in net/http/pprof profiling tool and the httprouter request router, allowing all pprof endpoints to be served through a single wildcard route without manual per-handler registration.
+- [random](pkg/random) - provides utility functions for generating random bytes, numeric identifiers, UID/UUID values, hexadecimal/base36 IDs, and configurable random strings.
+- [redact](pkg/redact) - removes secrets from log lines and HTTP dumps before they are emitted.
+- [redis](pkg/redis) - wraps go-redis for key/value storage, Pub/Sub messaging, typed payload encoding, and connection health checks.
+- [retrier](pkg/retrier) - provides a configurable retry engine for executing a task function with backoff, jitter, and per-attempt timeouts.
+- [s3](pkg/s3) - uploads, downloads, lists, and deletes S3 bucket objects through the AWS SDK v2 S3 client.
+- [sfcache](pkg/sfcache) - provides a local, thread-safe, fixed-size cache for expensive lookups with single-flight deduplication.
+- [slack](pkg/slack) - provides a client for sending messages to Slack via Incoming Webhooks.
+- [sleuth](pkg/sleuth) - provides a Go client for the Sleuth.io API, covering common write-side integrations for delivery metrics and operational signal ingestion.
+- [sliceutil](pkg/sliceutil) - filters, maps, and reduces slices with generic functions, and summarizes numeric slices with descriptive statistics.
+- [sqlconn](pkg/sqlconn) - manages a database/sql connection lifecycle in long-running Go services: applying pool limits, verifying connectivity, exposing health checks, and closing the connection on shutdown signals.
+- [sqltransaction](pkg/sqltransaction) - executes business logic inside a transaction with begin/commit/rollback control flow and consistent error handling.
+- [sqlutil](pkg/sqlutil) - quotes identifiers and string literals when generating SQL query fragments dynamically.
+- [sqlxtransaction](pkg/sqlxtransaction) - handles begin/commit/rollback control flow around business logic executed inside a sqlx transaction.
+- [sqs](pkg/sqs) - wraps github.com/aws/aws-sdk-go-v2/service/sqs with an API that covers the common queue workflow: send, receive, decode, acknowledge (delete), and health-check.
+- [stringkey](pkg/stringkey) - derives a stable, compact, non-cryptographic key from multiple text fields for lookup, deduplication, and idempotency-style identifiers.
+- [stringmetric](pkg/stringmetric) - provides string distance functions for approximate text matching, comparison, and fuzzy search.
+- [strsplit](pkg/strsplit) - splits strings into bounded-size chunks without breaking Unicode characters, keeping human-readable boundaries (spaces, punctuation, and newlines).
+- [testutil](pkg/testutil) - provides test-only helpers for forcing I/O failures on demand, capturing process output, bootstrapping HTTP handlers, and normalizing time-variant values in assertions.
+- [threadsafe](pkg/threadsafe) - defines lock interfaces for building reusable, goroutine-safe data structures and helpers without hard-coding a concrete lock type.
+- [tsmap](pkg/threadsafe/tsmap) - reads and writes maps shared across goroutines, taking a caller-supplied lock at every call site.
+- [tsslice](pkg/threadsafe/tsslice) - reads and writes slices shared across goroutines, taking a caller-supplied lock at every access.
+- [timeutil](pkg/timeutil) - provides two JSON-friendly time types. The standard library's time.Time marshals as RFC-3339 only, and time.Duration marshals as a raw nanosecond integer, which mismatch APIs that expect human-readable strings like "1h30m" or "2023-01-02T15:04:05Z". DateTime and Duration marshal to and from such strings, and the datetime format is selected by a type parameter checked at compile time.
+- [traceid](pkg/traceid) - captures a request-scoped trace ID at the service boundary: it reads the ID from an inbound HTTP header, propagates it through the context.Context for the lifetime of the request, and writes it back into outbound HTTP headers when calling downstream services, without coupling business logic to any particular tracing framework.
+- [typeutil](pkg/typeutil) - detects nil through interfaces, obtains zero values generically, dereferences pointers safely, and converts booleans to integers without a branch.
+- [uhex](pkg/uhex) - provides fixed-width, lowercase hexadecimal encoders for unsigned integers and fixed-size byte arrays.
+- [validator](pkg/validator) - wraps https://github.com/go-playground/validator and adds custom validation rules, a template-based error translation engine, and a functional-options API.
+- [valkey](pkg/valkey) - wraps the valkey-go client (https://github.com/valkey-io/valkey-go) for Valkey (https://valkey.io), a Redis-compatible in-memory data store. It covers key/value storage, typed data serialization, and Pub/Sub messaging behind a single Client type.
+
+<!-- gendoc:catalog:end -->
 
 ## Developers Quick Start
 
 Requirements:
 
-- Go (latest stable; repository is configured for Go 1.27)
-- Python 3 (required for additional tests)
+- Go 1.26.0 or later (the minimum declared in `go.mod`; any newer release works)
 
 Clone and validate the repository:
 
@@ -234,6 +264,8 @@ $ make
 #   make ensuretarget   : Create the target directories if missing
 #   make example        : Build and test the service example
 #   make format         : Format the source code
+#   make gendoc         : Generate the documentation derived from the source (READMEs, llms.txt)
+#   make gendoccheck    : Check that the generated documentation is up to date
 #   make generate       : Generate Go code automatically
 #   make govulncheck    : Check dependencies for known vulnerabilities
 #   make linter         : Check code against multiple linters
@@ -263,7 +295,7 @@ $ make
 ```bash
 $ make x
 
-# DEVMODE=LOCAL make version format clean mod deps generate qa example
+# DEVMODE=LOCAL make version format clean mod deps generate gendoc qa example
 
 # 1. make version       : Update this library version in the examples
 # 2. make format        : Format the source code
@@ -271,21 +303,22 @@ $ make x
 # 4. make mod           : Download dependencies
 # 5. make deps          : Get dependencies
 # 6. make generate      : Generate Go code automatically (test mocks)
-# 7. make qa            : Run all tests and static analysis tools
-    # 7.1. make linter      : Check the code with multiple linters (golangci/golangci-lint)
-    # 7.2. make test        : Run unit tests (go test)
-    # 7.3. make coverage    : Generate the coverage report (/target/report/coverage.html)
-# 8. make example       : Build and test the service example
-    # 8.1. make clean       : Remove any build artifact
-    # 8.2. make mod         : Download dependencies
-    # 8.3. make deps        : Get dependencies
-    # 8.4. make gendoc      : Generate static documentation from /doc/src (gomplate)
-    # 8.5. make generate    : Generate Go code automatically (test mocks)
-    # 8.6. make qa          : Run all tests and static analysis tools
-        # 8.6.1. make linter    : Check the code with multiple linters (golangci/golangci-lint)
-        # 8.6.2. make confcheck : Check the configuration files (jv)
-        # 8.6.3. make test      : Run unit tests (go test)
-        # 8.6.4. make coverage  : Generate the coverage report (target/report/coverage.html)
+# 7. make gendoc        : Regenerate the package READMEs and llms.txt from the source
+# 8. make qa            : Run all tests and static analysis tools
+    # 8.1. make linter      : Check the code with multiple linters (golangci/golangci-lint)
+    # 8.2. make test        : Run unit tests (go test)
+    # 8.3. make coverage    : Generate the coverage report (/target/report/coverage.html)
+# 9. make example       : Build and test the service example
+    # 9.1. make clean       : Remove any build artifact
+    # 9.2. make mod         : Download dependencies
+    # 9.3. make deps        : Get dependencies
+    # 9.4. make gendoc      : Generate static documentation from /doc/src (gomplate)
+    # 9.5. make generate    : Generate Go code automatically (test mocks)
+    # 9.6. make qa          : Run all tests and static analysis tools
+        # 9.6.1. make linter    : Check the code with multiple linters (golangci/golangci-lint)
+        # 9.6.2. make confcheck : Check the configuration files (jv)
+        # 9.6.3. make test      : Run unit tests (go test)
+        # 9.6.4. make coverage  : Generate the coverage report (target/report/coverage.html)
     # 8.7. make build       : Compile the application (go build > target/usr/bin/nuragoexample)
 ```
 

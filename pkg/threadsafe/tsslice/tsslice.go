@@ -1,7 +1,6 @@
 /*
-Package tsslice provides lock-aware generic helpers for operating on Go slices
-shared across multiple goroutines, keeping synchronization explicit around every
-access.
+Package tsslice reads and writes slices shared across goroutines, taking a
+caller-supplied lock at every access.
 
 # How It Works
 
@@ -89,6 +88,12 @@ several containers at once. Transforms to a different element type (Map/Reduce)
 are expressed through [Guarded.RDo].
 
 See also: github.com/tecnickcom/nurago/pkg/threadsafe
+
+# When To Use
+
+  - A slice is appended to and read from several goroutines.
+  - You want the lock to remain the caller's, so multiple structures can
+    share one.
 */
 package tsslice
 

@@ -2,6 +2,10 @@
 Package retrier provides a configurable retry engine for executing a task
 function with backoff, jitter, and per-attempt timeouts.
 
+The delay schedule and jitter strategies are those of
+[github.com/tecnickcom/nurago/pkg/backoff], so one retry policy can be applied
+consistently to HTTP and non-HTTP work.
+
 # How It Works
 
 [New] creates a [Retrier] with defaults, or with custom [Option] values.
@@ -44,6 +48,13 @@ The run loop always respects parent context cancellation.
 	if err != nil {
 	    return err
 	}
+
+# When To Use
+
+  - A task talks to a flaky dependency and should be retried on a subset of
+    errors.
+  - Each attempt needs its own timeout, separate from the overall deadline.
+  - You want retry decisions driven by a predicate on the returned error.
 */
 package retrier
 

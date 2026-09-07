@@ -1,6 +1,8 @@
 /*
-Package s3 provides helpers built on the AWS SDK v2 S3 client for common bucket
-object operations:
+Package s3 uploads, downloads, lists, and deletes S3 bucket objects through the
+AWS SDK v2 S3 client.
+
+It covers the common object operations:
 
   - upload object data,
   - download object data,
@@ -62,5 +64,10 @@ and exposes option hooks:
 	if err := c.HealthCheck(ctx); err != nil {
 	    return err
 	}
+
+# When To Use
+
+  - A service puts, gets, lists, and deletes objects and nothing more exotic.
+  - S3 should be reported on the service health endpoint.
 */
 package s3

@@ -40,5 +40,11 @@ https://api.slack.com/messaging/webhooks
 	if err != nil {
 	    return err
 	}
+
+# When To Use
+
+  - A service sends alerts or deployment notices to a channel.
+  - Sender name, icon, and channel have defaults but must be overridable per
+    message.
 */
 package slack

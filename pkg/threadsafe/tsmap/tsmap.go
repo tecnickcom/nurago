@@ -1,7 +1,6 @@
 /*
-Package tsmap provides lock-aware generic helpers for operating on Go maps
-shared across multiple goroutines, keeping synchronization explicit at every
-call site.
+Package tsmap reads and writes maps shared across goroutines, taking a
+caller-supplied lock at every call site.
 
 # How It Works
 
@@ -86,6 +85,13 @@ containers at once. Transforms to a different type (Map/Reduce/Invert) are
 expressed through [Guarded.RDo].
 
 See also: github.com/tecnickcom/nurago/pkg/threadsafe
+
+# When To Use
+
+  - A map is shared across goroutines and you want synchronization visible in
+    the code, not hidden.
+  - You need generic helpers (keys, values, filter, get-or-set) that respect
+    an external lock.
 */
 package tsmap
 

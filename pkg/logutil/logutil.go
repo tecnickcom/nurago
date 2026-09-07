@@ -38,5 +38,13 @@ The third keeps the two backends of this module interchangeable, since logsrv en
     validator.ValidationErrors) still renders as its message.
 
 A group that resolves to zero members is likewise dropped rather than written as a bare "{}".
+
+# When To Use
+
+  - Log level and format come from configuration strings rather than from
+    code.
+  - Every record needs common attributes such as service name and trace ID.
+  - A hook must observe emitted records, for example to increment a metrics
+    counter per level.
 */
 package logutil

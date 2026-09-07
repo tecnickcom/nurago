@@ -23,5 +23,11 @@ Default collectors include:
     size histogram, and response size histogram
   - HTTP client request count, in-flight gauge, and duration histogram
   - error counters by level and by task/operation/code
+
+# When To Use
+
+  - Your platform scrapes metrics rather than receiving pushes.
+  - You want standard HTTP, SQL, and error metrics without defining
+    collectors by hand.
 */
 package prometheus

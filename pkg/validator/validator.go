@@ -61,6 +61,13 @@ and [WithCustomTypeFunc] register project-specific rules. Every failure is an
 	// err is an errors.Join aggregate containing one *Error per failed field,
 	// each with a message like:
 	//   "phone must be a valid E.164 formatted phone number without the leading '+' symbol"
+
+# When To Use
+
+  - Request payloads are validated from struct tags.
+  - Error messages must be readable and templated rather than raw field
+    paths.
+  - You need validation rules beyond the built-in set.
 */
 package validator
 

@@ -61,6 +61,12 @@ tests.
 The SHA-1 algorithm is used solely because the HIBP API requires it. The
 password is hashed locally; only the 5-character prefix is sent over TLS.
 This package does not store, log, or persist the password or its hash.
+
+# When To Use
+
+  - Registration and password-change flows should reject known-breached
+    passwords.
+  - A breach-count threshold suits your policy better than a flat reject.
 */
 package passwordpwned
 

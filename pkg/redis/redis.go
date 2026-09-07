@@ -1,7 +1,6 @@
 /*
-Package redis provides helpers built on go-redis for common application
-workflows: key/value storage, Pub/Sub messaging, typed payload encoding, and
-connection health checks.
+Package redis wraps go-redis for key/value storage, Pub/Sub messaging, typed
+payload encoding, and connection health checks.
 
 Redis reference: https://redis.io
 Underlying client: https://github.com/redis/go-redis
@@ -88,5 +87,12 @@ To swap in an encrypted codec, supply custom functions at construction time:
 	    redis.WithMessageEncodeFunc(myEncryptAndEncode),
 	    redis.WithMessageDecodeFunc(myDecryptAndDecode),
 	)
+
+# When To Use
+
+  - You store structs and want serialization handled rather than written per
+    call site.
+  - The same client should serve caching and Pub/Sub.
+  - Redis must be reported on the service health endpoint.
 */
 package redis

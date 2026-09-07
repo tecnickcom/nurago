@@ -16,5 +16,11 @@ Response logs contain code, duration, timestamp, trace ID, and payload metadata,
 logged by class (2xx debug, 4xx warn, 5xx error). JSend-style status projection
 and round-trip parsing are provided by [StatusSuccess], [StatusFail],
 [StatusError], [Status.UnmarshalJSON], and [ErrInvalidStatus].
+
+# When To Use
+
+  - You are writing handlers against net/http and want consistent request
+    parsing and response writing.
+  - Responses should follow one envelope across every endpoint.
 */
 package httputil

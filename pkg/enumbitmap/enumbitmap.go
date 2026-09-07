@@ -1,6 +1,6 @@
 /*
-Package enumbitmap provides helpers to encode and decode enumeration values as
-bitmaps.
+Package enumbitmap encodes a set of enumeration values as an integer bitmap and
+decodes it back.
 
 Each bit corresponds to a unique enumeration value. The package processes up to
 32 bit positions (1<<0 through 1<<31).
@@ -32,6 +32,12 @@ Example with 8 bits:
 	01000000 =  64 dec = SEVENTH
 	10000000 = 128 dec = EIGHTH
 	00001001 = 1 + 8 = 9 dec = FIRST + FOURTH
+
+# When To Use
+
+  - A set of flags is stored in one integer column or transmitted as one
+    number.
+  - You want the mapping between names and bit positions kept in one place.
 */
 package enumbitmap
 

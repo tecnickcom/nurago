@@ -23,6 +23,12 @@ Safe range:
     resolves a 1e-6 step (its ULP stays below 1e-6); beyond it the sixth
     decimal digit is no longer representable, so it is excluded from the safe
     range rather than rounded.
+
+# When To Use
+
+  - Money or quantities must not accumulate binary floating-point error.
+  - Values are stored as integers and formatted for display with a fixed
+    number of decimals.
 */
 package decint
 

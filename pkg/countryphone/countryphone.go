@@ -17,6 +17,11 @@ provider-specific or updated plans.
 
 Create a resolver with New, then call NumberInfo for a prefix or full number.
 When no prefix matches, NumberInfo returns an error.
+
+# When To Use
+
+  - You classify phone numbers by origin from the prefix alone.
+  - Longest-prefix matching is required, because prefixes overlap.
 */
 package countryphone
 

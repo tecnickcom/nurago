@@ -65,5 +65,11 @@ Receive flow behavior:
 	if receiptHandle != "" {
 	    _ = c.Delete(ctx, receiptHandle)
 	}
+
+# When To Use
+
+  - A worker consumes a queue and acknowledges messages after processing.
+  - Message bodies are structs and should be encoded and decoded
+    consistently.
 */
 package sqs

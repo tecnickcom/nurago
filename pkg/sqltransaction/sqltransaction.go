@@ -32,6 +32,12 @@ Rollback behavior is guarded to avoid noisy false failures:
 For a similar helper using github.com/jmoiron/sqlx instead of database/sql,
 see:
 github.com/tecnickcom/nurago/pkg/sqlxtransaction
+
+# When To Use
+
+  - Several statements must succeed or fail together.
+  - You want rollback guaranteed on error and on panic, without repeating the
+    boilerplate.
 */
 package sqltransaction
 

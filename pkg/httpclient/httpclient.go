@@ -65,5 +65,13 @@ so that per-host connection reuse is not throttled for the common case of many
 concurrent calls to a few downstream hosts. Use [WithTLSClientConfig] for custom
 CAs or client certificates, or [WithTransport] to supply a fully tuned transport
 (pool sizes, proxy, HTTP/2) when the defaults do not fit.
+
+# When To Use
+
+  - Outbound calls should carry the inbound trace ID without threading it
+    through every call site.
+  - You want request and response logging that redacts secrets by default.
+  - You want one client configuration shared across every upstream
+    dependency.
 */
 package httpclient

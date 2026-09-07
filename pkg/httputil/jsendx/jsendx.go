@@ -13,6 +13,13 @@ to send wrapped JSON responses and provides default handlers for common service
 endpoints and router fallbacks (not-found, method-not-allowed, panic, index,
 ping, status, and public-IP), plus a [healthcheck.ResultWriter] adapter via
 [JSXResp.HealthCheckResultWriter].
+
+# When To Use
+
+  - An API contract specifies the JSend format for success, failure, and
+    error responses.
+  - You want every handler in a service to answer with the same envelope
+    shape.
 */
 package jsendx
 

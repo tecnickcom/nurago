@@ -1,6 +1,6 @@
 /*
-Package healthcheck provides a framework for defining, executing, and
-aggregating service health probes.
+Package healthcheck runs dependency probes concurrently and aggregates them into
+a single HTTP health endpoint.
 
 It standardizes health probing around three pieces:
   - [HealthChecker]: check contract (`HealthCheck(context.Context) error`),
@@ -11,6 +11,16 @@ It standardizes health probing around three pieces:
 
 The default handler response is JSON and maps each check ID to either "OK" or
 the check error message.
+
+The client packages in this library expose a HealthCheck method that satisfies
+[HealthChecker] directly, so they register without an adapter:
+[github.com/tecnickcom/nurago/pkg/redis],
+[github.com/tecnickcom/nurago/pkg/valkey],
+[github.com/tecnickcom/nurago/pkg/sqs],
+[github.com/tecnickcom/nurago/pkg/s3],
+[github.com/tecnickcom/nurago/pkg/sqlconn],
+[github.com/tecnickcom/nurago/pkg/ipify] and
+[github.com/tecnickcom/nurago/pkg/slack].
 
 # Aggregation Semantics
 
@@ -34,6 +44,14 @@ unchanged.
 context timeout control and request customization via [WithConfigureRequest].
 
 For an implementation example, see examples/service/internal/cli/bind.go.
+
+# When To Use
+
+  - A readiness endpoint must report the status of several dependencies
+    individually.
+  - You want each probe bounded by a timeout so one hung dependency does not
+    hang the endpoint.
+  - Your clients already expose a HealthCheck(ctx) error method.
 */
 package healthcheck
 

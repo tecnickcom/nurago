@@ -1,6 +1,6 @@
 /*
-Package sliceutil provides generic, allocation-conscious helpers for common
-slice operations and numeric dataset summarization.
+Package sliceutil filters, maps, and reduces slices with generic functions, and
+summarizes numeric slices with descriptive statistics.
 
 # What It Provides
 
@@ -34,6 +34,12 @@ Descriptive statistics for numeric slices:
 	    return err
 	}
 	_ = ds.Mean
+
+# When To Use
+
+  - You want map, filter, and reduce over slices without writing loops each
+    time.
+  - A numeric slice needs mean, median, or percentile values.
 */
 package sliceutil
 

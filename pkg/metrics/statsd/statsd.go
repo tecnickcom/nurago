@@ -17,5 +17,11 @@ returns HTTP 501 (Not Implemented). Database instrumentation via
 [Client.InstrumentDB] is currently a no-op.
 
 This package is based on github.com/tecnickcom/statsd.
+
+# When To Use
+
+  - An existing StatsD or DogStatsD agent already collects your metrics.
+  - You want push-based delivery over UDP with minimal overhead in the
+    process.
 */
 package statsd

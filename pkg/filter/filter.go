@@ -170,6 +170,11 @@ exactly one of a rule and its negation matches; they fail to partition the eleme
 the field is unreachable on an element (a nil pointer along the path, or a field absent on a
 []any element), which is a non-match for both. `!=` is the negation of `=`
 (equal-fold), i.e. "not equal under case folding", not a distinct operator.
+
+# When To Use
+
+  - Filter criteria arrive from an API request or a configuration file.
+  - Rules must be composable and evaluated against arbitrary struct fields.
 */
 package filter
 

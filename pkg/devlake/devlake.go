@@ -18,6 +18,11 @@ The client provides:
 
 Based on the DevLake Webhook API documentation:
 https://devlake.apache.org/docs/Plugins/webhook/
+
+# When To Use
+
+  - You feed DORA metrics into DevLake from a pipeline.
+  - Payloads should be validated before they are sent.
 */
 package devlake
 

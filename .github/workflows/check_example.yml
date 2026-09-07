@@ -25,6 +25,8 @@ jobs:
           cache: true
       - name: linter
         run: cd examples/service && make mod deps linter govulncheck GOPATH=$(go env GOPATH)
+      - name: go.mod and go.sum are tidy
+        run: cd examples/service && make modcheck GOPATH=$(go env GOPATH)
 
   example-test:
     runs-on: ubuntu-latest

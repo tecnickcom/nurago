@@ -28,6 +28,13 @@ helpers.
 These interfaces only describe the locking contract; they do not enforce it.
 All access to the protected data must funnel through the helper functions using
 the same lock instance, otherwise concurrent reads and writes are not safe.
+
+# When To Use
+
+  - You are writing a goroutine-safe type and want the caller to choose
+    sync.Mutex or sync.RWMutex.
+  - Read-heavy code should be able to declare that it only needs a shared
+    lock.
 */
 package threadsafe
 

@@ -48,6 +48,12 @@ verifies expected 404 semantics and response content.
 	if err != nil {
 	    return err
 	}
+
+# When To Use
+
+  - A deployment pipeline reports to Sleuth.
+  - Manual changes such as feature-flag flips should be tracked alongside
+    deploys.
 */
 package sleuth
 

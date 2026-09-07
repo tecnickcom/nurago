@@ -32,6 +32,11 @@ Or get the digit sequence as a slice for programmatic use:
 
 	digits := phonekeypad.KeypadNumber("1-800-FLOWERS")
 	// digits == []int{1, 8, 0, 0, 3, 5, 6, 9, 3, 7, 7}
+
+# When To Use
+
+  - Vanity numbers such as 1-800-FLOWERS must be converted to digits.
+  - You index numbers for search in their digit form.
 */
 package phonekeypad
 

@@ -57,6 +57,12 @@ According to the birthday bound for a 64-bit hash space (~1.8x10^19):
 
 Choose a larger hash or cryptographic construction when your scale or threat
 model requires stronger collision guarantees.
+
+# When To Use
+
+  - A composite lookup key or deduplication key must be built from multiple
+    fields.
+  - The key needs to be stable across processes and releases.
 */
 package stringkey
 

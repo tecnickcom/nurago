@@ -80,6 +80,12 @@ byte drawn from it. Entries must therefore be single-byte (ASCII) values.
 	alphaNum := []byte("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 	r2 := random.New(nil, random.WithByteToCharMap(alphaNum))
 	_, _ = r2.RandString(16)
+
+# When To Use
+
+  - You need UUIDs, hex IDs, or base36 IDs without adding a dedicated
+    dependency.
+  - Random strings must be drawn from a specified alphabet.
 */
 package random
 

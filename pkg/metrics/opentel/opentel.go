@@ -26,5 +26,11 @@ By default, exporter selection is environment-driven:
 Resource attributes are resolved from explicit parameters and environment,
 including OTEL_SERVICE_NAME, OTEL_SERVICE_VERSION,
 OTEL_DEPLOYMENT_ENVIRONMENT_NAME, and OTEL_RESOURCE_ATTRIBUTES.
+
+# When To Use
+
+  - Your platform collects OTLP and you want traces and metrics from one
+    client.
+  - Trace context must propagate across service boundaries via W3C headers.
 */
 package opentel

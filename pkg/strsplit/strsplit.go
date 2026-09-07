@@ -55,6 +55,12 @@ whitespace-trimmed and never empty.
 
 	chunks := strsplit.Chunk(text, 280, -1)    // split full text block
 	lineParts := strsplit.ChunkLine(line, 64, 3) // at most 3 chunks
+
+# When To Use
+
+  - Text must fit a field or message size limit measured in bytes.
+  - Splitting must not cut through a multi-byte UTF-8 character or an emoji.
+  - Chunks should break at spaces, punctuation, or newlines where possible.
 */
 package strsplit
 

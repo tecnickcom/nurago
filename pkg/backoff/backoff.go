@@ -48,6 +48,14 @@ to ~2^53 ns (~104 days); beyond that a result may differ by a few nanoseconds.
 A [Schedule] is stateful and must not be used concurrently; construct one per
 retry sequence. [AddJitter] is a stateless function and is safe for concurrent
 use.
+
+# When To Use
+
+  - You already have a retry loop and only need the delay schedule.
+  - Concurrent clients retry against the same dependency and must not
+    synchronize into a thundering herd.
+  - You want the jitter strategy to be an explicit choice rather than a
+    hidden default.
 */
 package backoff
 

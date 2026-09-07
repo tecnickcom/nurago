@@ -1,0 +1,80 @@
+# nurago
+
+> 70 independent Go packages for backend services. Each is imported on its
+> own and pulls only its own dependencies; 40 reach no external module at all.
+
+Install: `go get github.com/tecnickcom/nurago`
+Reference documentation: https://pkg.go.dev/github.com/tecnickcom/nurago
+
+## Packages
+
+- [awsopt](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/awsopt): Package awsopt configures the aws-sdk-go-v2 library consistently across multiple AWS service clients. It centralizes config.LoadOptionsFunc calls into a composable Options slice that can be built once and handed to any AWS-based package in this library.
+- [awssecretcache](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/awssecretcache): Package awssecretcache provides a local, thread-safe, fixed-size cache for AWS Secrets Manager lookups, with single-flight deduplication.
+- [backoff](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/backoff): Package backoff computes successive retry delays with exponential growth, a bounded maximum, and random jitter.
+- [bootstrap](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/bootstrap): Package bootstrap wires together the core infrastructure of a Go service: context lifecycle, structured logging, metrics collection, OS signal handling, and graceful shutdown, in a single function call.
+- [config](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/config): Package config provides configuration bootstrap for Go services built on top of Viper.
+- [countrycode](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/countrycode): Package countrycode provides access to ISO-3166 country metadata.
+- [countryphone](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/countryphone): Package countryphone resolves international phone number prefixes into country and regional metadata.
+- [decint](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/decint): Package decint provides utility functions to parse and represent decimal values as fixed-point integers with a defined precision.
+- [devlake](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/devlake): Package devlake provides a Go client for the DevLake Webhook API.
+- [dnscache](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/dnscache): Package dnscache provides a local DNS cache that is safe for concurrent use, bounded in size, and uses single-flight request collapsing to avoid duplicate lookups.
+- [encode](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/encode): Package encode serializes and deserializes values crossing system boundaries such as databases, queues, caches, and RPC payloads.
+- [encrypt](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/encrypt): Package encrypt encrypts and decrypts data for transport and storage using AES-GCM authenticated encryption.
+- [enumbitmap](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/enumbitmap): Package enumbitmap encodes a set of enumeration values as an integer bitmap and decodes it back.
+- [enumcache](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/enumcache): Package enumcache provides thread-safe storage and lookup for enumeration name and ID mappings.
+- [enumdb](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/enumdb): Package enumdb loads enumeration sets from relational database tables into thread-safe enum caches.
+- [errutil](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/errutil): Package errutil annotates errors with caller location, joins cleanup failures onto an existing error, and enumerates the errors inside an errors.Join value.
+- [filter](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/filter): Package filter provides declarative, rule-based filtering for in-memory slices. It evaluates structured Rule expressions against slice elements and filters the slice in place.
+- [healthcheck](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/healthcheck): Package healthcheck runs dependency probes concurrently and aggregates them into a single HTTP health endpoint.
+- [httpclient](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/httpclient): Package httpclient provides a configurable outbound HTTP client with trace propagation and structured request/response logging.
+- [httpretrier](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/httpretrier): Package httpretrier provides configurable retry execution for outbound HTTP requests.
+- [httpreverseproxy](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/httpreverseproxy): Package httpreverseproxy provides a reverse-proxy client built on top of net/http/httputil.ReverseProxy.
+- [httpserver](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/httpserver): Package httpserver provides a configurable HTTP server bootstrap for Go services.
+- [httputil](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/httputil): Package httputil provides HTTP request/response primitives for Go services built on top of net/http.
+- [jsendx](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/httputil/jsendx): Package jsendx implements an extended JSend response envelope for HTTP APIs.
+- [ipify](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/ipify): Package ipify provides a small client to resolve the current instance public IP address using the ipify service (https://www.ipify.org/).
+- [jirasrv](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/jirasrv): Package jirasrv provides a typed HTTP client foundation for Jira Server REST integrations.
+- [jwt](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/jwt): Package jwt provides an HTTP-oriented JWT authentication helper for username/password login flows: validate user credentials, issue short-lived signed JWTs, authorize protected endpoints from an Authorization header, and optionally renew tokens near expiration.
+- [kafka](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/kafka): Package kafka provides a pure-Go API for producing and consuming Apache Kafka messages. It requires no CGO and no system librdkafka installation.
+- [logsrv](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/logsrv): Package logsrv provides a zerolog backend exposed through the standard log/slog API.
+- [logutil](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/logutil): Package logutil provides configuration-driven logging utilities built around Go's standard log/slog package.
+- [maputil](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/maputil): Package maputil filters, maps, reduces, and inverts Go maps with generic functions.
+- [metrics](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/metrics): Package metrics defines a backend-agnostic instrumentation contract for Go services.
+- [opentel](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/metrics/opentel): Package opentel implements github.com/tecnickcom/nurago/pkg/metrics.Client using OpenTelemetry for both metrics and tracing.
+- [prometheus](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/metrics/prometheus): Package prometheus implements github.com/tecnickcom/nurago/pkg/metrics.Client using the Prometheus client ecosystem.
+- [statsd](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/metrics/statsd): Package statsd implements github.com/tecnickcom/nurago/pkg/metrics.Client using the StatsD protocol.
+- [mysqllock](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/mysqllock): Package mysqllock provides process-distributed mutual exclusion using MySQL's named lock primitives GET_LOCK and RELEASE_LOCK.
+- [numtrie](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/numtrie): Package numtrie provides a generic, digit-indexed trie (prefix tree) for associating values of any type with numerical keys, with built-in support for partial/prefix matching and alphabetical (vanity) phone-number keys.
+- [paging](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/paging): Package paging computes pagination metadata (current page, total pages, previous/next page numbers, and SQL OFFSET/LIMIT values) from three inputs: current page number, page size, and total item count.
+- [passwordhash](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/passwordhash): Package passwordhash provides OWASP-compliant password hashing and verification using the Argon2id algorithm (RFC 9106), with an optional AES-GCM encryption layer (peppered hashing) for defense in depth.
+- [passwordpwned](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/passwordpwned): Package passwordpwned checks whether a password has appeared in a known data breach, using the Have I Been Pwned (HIBP) Pwned Passwords API v3 (https://haveibeenpwned.com/API/v3#PwnedPasswords).
+- [periodic](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/periodic): Package periodic schedules a task function to run repeatedly at a fixed interval, with optional random jitter and a per-invocation context timeout.
+- [phonekeypad](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/phonekeypad): Package phonekeypad converts alphabetic strings and phone number literals to their numeric equivalents on a standard 12-key telephony keypad (ITU E.161 / ITU T.9).
+- [profiling](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/profiling): Package profiling bridges Go's built-in net/http/pprof profiling tool and the httprouter request router, allowing all pprof endpoints to be served through a single wildcard route without manual per-handler registration.
+- [random](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/random): Package random provides utility functions for generating random bytes, numeric identifiers, UID/UUID values, hexadecimal/base36 IDs, and configurable random strings.
+- [redact](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/redact): Package redact removes secrets from log lines and HTTP dumps before they are emitted.
+- [redis](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/redis): Package redis wraps go-redis for key/value storage, Pub/Sub messaging, typed payload encoding, and connection health checks.
+- [retrier](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/retrier): Package retrier provides a configurable retry engine for executing a task function with backoff, jitter, and per-attempt timeouts.
+- [s3](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/s3): Package s3 uploads, downloads, lists, and deletes S3 bucket objects through the AWS SDK v2 S3 client.
+- [sfcache](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/sfcache): Package sfcache provides a local, thread-safe, fixed-size cache for expensive lookups with single-flight deduplication.
+- [slack](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/slack): Package slack provides a client for sending messages to Slack via Incoming Webhooks.
+- [sleuth](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/sleuth): Package sleuth provides a Go client for the Sleuth.io API, covering common write-side integrations for delivery metrics and operational signal ingestion.
+- [sliceutil](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/sliceutil): Package sliceutil filters, maps, and reduces slices with generic functions, and summarizes numeric slices with descriptive statistics.
+- [sqlconn](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/sqlconn): Package sqlconn manages a database/sql connection lifecycle in long-running Go services: applying pool limits, verifying connectivity, exposing health checks, and closing the connection on shutdown signals.
+- [sqltransaction](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/sqltransaction): Package sqltransaction executes business logic inside a transaction with begin/commit/rollback control flow and consistent error handling.
+- [sqlutil](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/sqlutil): Package sqlutil quotes identifiers and string literals when generating SQL query fragments dynamically.
+- [sqlxtransaction](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/sqlxtransaction): Package sqlxtransaction handles begin/commit/rollback control flow around business logic executed inside a sqlx transaction.
+- [sqs](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/sqs): Package sqs wraps github.com/aws/aws-sdk-go-v2/service/sqs with an API that covers the common queue workflow: send, receive, decode, acknowledge (delete), and health-check.
+- [stringkey](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/stringkey): Package stringkey derives a stable, compact, non-cryptographic key from multiple text fields for lookup, deduplication, and idempotency-style identifiers.
+- [stringmetric](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/stringmetric): Package stringmetric provides string distance functions for approximate text matching, comparison, and fuzzy search.
+- [strsplit](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/strsplit): Package strsplit splits strings into bounded-size chunks without breaking Unicode characters, keeping human-readable boundaries (spaces, punctuation, and newlines).
+- [testutil](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/testutil): Package testutil provides test-only helpers for forcing I/O failures on demand, capturing process output, bootstrapping HTTP handlers, and normalizing time-variant values in assertions.
+- [threadsafe](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/threadsafe): Package threadsafe defines lock interfaces for building reusable, goroutine-safe data structures and helpers without hard-coding a concrete lock type.
+- [tsmap](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/threadsafe/tsmap): Package tsmap reads and writes maps shared across goroutines, taking a caller-supplied lock at every call site.
+- [tsslice](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/threadsafe/tsslice): Package tsslice reads and writes slices shared across goroutines, taking a caller-supplied lock at every access.
+- [timeutil](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/timeutil): Package timeutil provides two JSON-friendly time types. The standard library's time.Time marshals as RFC-3339 only, and time.Duration marshals as a raw nanosecond integer, which mismatch APIs that expect human-readable strings like "1h30m" or "2023-01-02T15:04:05Z". DateTime and Duration marshal to and from such strings, and the datetime format is selected by a type parameter checked at compile time.
+- [traceid](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/traceid): Package traceid captures a request-scoped trace ID at the service boundary: it reads the ID from an inbound HTTP header, propagates it through the context.Context for the lifetime of the request, and writes it back into outbound HTTP headers when calling downstream services, without coupling business logic to any particular tracing framework.
+- [typeutil](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/typeutil): Package typeutil detects nil through interfaces, obtains zero values generically, dereferences pointers safely, and converts booleans to integers without a branch.
+- [uhex](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/uhex): Package uhex provides fixed-width, lowercase hexadecimal encoders for unsigned integers and fixed-size byte arrays.
+- [validator](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/validator): Package validator wraps https://github.com/go-playground/validator and adds custom validation rules, a template-based error translation engine, and a functional-options API.
+- [valkey](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/valkey): Package valkey wraps the valkey-go client (https://github.com/valkey-io/valkey-go) for Valkey (https://valkey.io), a Redis-compatible in-memory data store. It covers key/value storage, typed data serialization, and Pub/Sub messaging behind a single Client type.

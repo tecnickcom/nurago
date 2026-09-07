@@ -8,6 +8,10 @@ attempts, applying delay growth and jitter between retries. The retry decision
 function receives both `*http.Response` and `error`, enabling policy decisions
 based on transport failures and/or HTTP status codes.
 
+Retries are applied per request rather than per client, so an already
+configured client (instrumented, authenticated, or both) keeps its behavior and
+is wrapped instead of replaced.
+
 # Built-in Retry Policies
 
 Predefined helpers are provided for common semantics:
@@ -39,6 +43,14 @@ When a request has a body and retries are needed, the retrier relies on
 request has a body that cannot be recreated (GetBody missing or failing),
 retries cannot continue and Do returns an error. Bodyless requests (e.g. a GET
 with no body) retry without restriction.
+
+# When To Use
+
+  - Calls to an upstream API fail intermittently with 429 or 5xx responses.
+  - Read and write requests need different retry policies, because replaying
+    a write may duplicate a side effect.
+  - The server sends Retry-After and you want it respected, bounded by a cap
+    you choose.
 */
 package httpretrier
 

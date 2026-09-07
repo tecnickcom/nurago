@@ -62,6 +62,12 @@ Use bound parameters for untrusted data, and supply [WithQuoteValueFunc] /
 	val := u.QuoteValue("o'reilly")      // 'o''reilly'
 	query := "SELECT " + col + " FROM " + u.QuoteID("users") + " WHERE " + col + " = " + val
 	_ = query
+
+# When To Use
+
+  - A table or column name comes from configuration and cannot be a bind
+    parameter.
+  - You are generating DDL or a migration statement.
 */
 package sqlutil
 

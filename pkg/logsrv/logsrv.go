@@ -144,6 +144,12 @@ drops every record regardless of cfg.Level. No other global level affects the ou
 still encoded when it is dropped (every value is resolved and every caller marshaler runs, so their
 side effects still fire) because zerolog discards the event at the write, not at the build; use
 cfg.Level (or logutil.FormatNone) to stop the work as well as the output.
+
+# When To Use
+
+  - You want zerolog's encoding performance while application code depends
+    only on log/slog.
+  - Log output must be JSON in production and human-readable in development.
 */
 package logsrv
 

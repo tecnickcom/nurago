@@ -33,6 +33,11 @@ Rollback behavior is deferred and guarded:
 For a similar helper based on the standard database/sql package (instead of
 github.com/jmoiron/sqlx), see:
 github.com/tecnickcom/nurago/pkg/sqltransaction
+
+# When To Use
+
+  - You use sqlx and want struct scanning inside a transaction.
+  - Rollback must be guaranteed on error and on panic.
 */
 package sqlxtransaction
 

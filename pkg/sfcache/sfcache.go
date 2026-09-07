@@ -136,6 +136,13 @@ lookup is attempted.
 Example applications in this repository:
   - github.com/tecnickcom/nurago/pkg/awssecretcache
   - github.com/tecnickcom/nurago/pkg/dnscache
+
+# When To Use
+
+  - Many goroutines request the same key at once and the upstream should see
+    one request.
+  - Values expire on a TTL and the cache must stay bounded in size.
+  - You want to keep serving the last good value while the upstream is down.
 */
 package sfcache
 

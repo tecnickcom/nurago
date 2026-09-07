@@ -1,4 +1,4 @@
-//go:generate go tool mockgen -write_package_comment=false -package passwordpwned -destination ./mock_test.go . HTTPClient
+//go:generate mockgen -write_package_comment=false -package passwordpwned -destination ./mock_test.go . HTTPClient
 package passwordpwned
 
 import (

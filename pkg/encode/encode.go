@@ -1,6 +1,6 @@
 /*
-Package encode provides helpers for serialization and deserialization across
-system boundaries such as databases, queues, caches, and RPC payloads.
+Package encode serializes and deserializes values crossing system boundaries
+such as databases, queues, caches, and RPC payloads.
 
 The package supports two main modes:
 
@@ -16,6 +16,11 @@ Caveats:
     (Serialize/Deserialize) for untrusted, interoperable payloads.
   - The JSON encoding appends a trailing newline, which is included in the
     encoded output.
+
+# When To Use
+
+  - The same payload shape moves between a database, a queue, and a cache.
+  - You want one encoding decision rather than one per call site.
 */
 package encode
 

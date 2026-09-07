@@ -40,6 +40,12 @@ awsopt is used as the AWS configuration layer by:
 When consuming an awsopt-based package, pass additional options via the
 package's own WithAWSOptions helper so all AWS clients in the process share
 consistent configuration.
+
+# When To Use
+
+  - Several AWS clients in one service must use the same region, credentials,
+    and endpoint settings.
+  - The region is derived from an endpoint URL supplied by configuration.
 */
 package awsopt
 

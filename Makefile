@@ -37,14 +37,19 @@ TARGETDIR=target
 # Directory where to store binary utility tools
 BINUTIL=$(TARGETDIR)/binutil
 
+# Directory of the separate module declaring the build tools.
+# The tools are kept out of the root go.mod so that consumers of this library
+# do not carry them in their module graph.
+GOTOOLSDIR=$(CURDIR)/resources/tools
+
 # GO lang path
 ifeq ($(GOPATH),)
 	# extract the GOPATH
 	GOPATH=$(shell echo "$(CURDIR)" | sed 's|/src/.*||')
 endif
 
-# Add the GO binary dir in the PATH
-export PATH := $(GOPATH)/bin:$(PATH)
+# Add the GO binary dir and the local tool dir in the PATH
+export PATH := $(CURDIR)/$(BINUTIL):$(GOPATH)/bin:$(PATH)
 
 # sed argument for in-place substitutions
 SEDINPLACE=-i
@@ -61,15 +66,16 @@ ifeq ($(DOCKER),)
 endif
 
 # Common commands
-GO=GOPATH="$(GOPATH)" GOPRIVATE=$(CVSPATH) $(shell which go)
+GO=GOPATH="$(GOPATH)" $(shell which go)
 GOVERSION=${shell go version | grep -Eo '(go[0-9]+.[0-9]+)'}
 GOFMT=$(shell which gofmt)
 GOTEST=$(GO) test
 GODOC=GOPATH="$(GOPATH)" $(shell which godoc)
 GOLANGCILINT=$(BINUTIL)/golangci-lint
 GOLANGCILINTVERSION=v2.13.2
-GOVULNCHECK=$(GO) tool govulncheck
-BENCHSTAT=$(GO) tool benchstat
+GOVULNCHECK=$(BINUTIL)/govulncheck
+BENCHSTAT=$(BINUTIL)/benchstat
+GOJUNITREPORT=$(BINUTIL)/go-junit-report
 
 # Benchmark flags for deterministic allocation stats (fixed iteration count, repeated for statistical significance)
 BENCHFLAGS=-tags=unit,benchmark -run=^$$ -bench=. -benchmem -benchtime=100x -count=6
@@ -89,7 +95,7 @@ GOPKGS=$(shell $(GO) list $(SRCDIR)/...)
 ifeq ($(strip $(DEVMODE)),LOCAL)
 	TESTEXTRACMD=&& $(GO) tool cover -func=$(TARGETDIR)/report/coverage.out
 else
-	TESTEXTRACMD=2>&1 | tee >(PATH="$(GOPATH)/bin:$(PATH)" go-junit-report > $(TARGETDIR)/test/report.xml); test $${PIPESTATUS[0]} -eq 0
+	TESTEXTRACMD=2>&1 | tee >($(GOJUNITREPORT) > $(TARGETDIR)/test/report.xml); test $${PIPESTATUS[0]} -eq 0
 endif
 
 # Set default configuration file to generate a new project from the example service
@@ -121,7 +127,7 @@ all: help
 ## Test and build everything from scratch
 .PHONY: x
 x:
-	DEVMODE=LOCAL $(MAKE) version format clean mod deps generate qa example
+	DEVMODE=LOCAL $(MAKE) version format clean mod deps generate gendoc qa example
 
 ## Remove any build artifact
 .PHONY: clean
@@ -171,6 +177,17 @@ format:
 	@find "$(SRCDIR)" -type f -name "*.go" -exec $(GOFMT) -s -w {} \;
 	cd examples/service && $(MAKE) format
 
+## Generate the documentation derived from the source (READMEs, llms.txt)
+.PHONY: gendoc
+gendoc:
+	@./resources/gendoc/gendoc.sh
+
+## Check that the generated documentation is up to date
+.PHONY: gendoccheck
+gendoccheck: gendoc
+	@git diff --exit-code -- ':(glob)pkg/**/README.md' README.md llms.txt \
+		|| (echo "Generated docs are stale: run 'make gendoc' and commit the result." && exit 1)
+
 ## Generate go code automatically
 .PHONY: generate
 generate:
@@ -194,7 +211,18 @@ linter:
 ## Download dependencies
 .PHONY: mod
 mod: gotools
-	$(GO) mod download all
+# Without arguments this downloads the modules required to build and test this
+# module. The "all" pattern additionally walks the module graph and writes
+# go.sum entries for modules no package here reaches.
+	$(GO) mod download
+
+## Check that go.mod and go.sum are tidy
+.PHONY: modcheck
+modcheck:
+# Reports what "go mod tidy" would change and fails if anything would, without
+# writing to go.mod or go.sum.
+	$(GO) mod tidy -diff -compat=$(shell sed -n -E 's/^go ([0-9]+\.[0-9]+).*/\1/p' go.mod)
+	$(GO) -C "$(GOTOOLSDIR)" mod tidy -diff
 
 ## Generate a new project from the example using the data set via CONFIG=project.cfg
 .PHONY: project
@@ -281,11 +309,8 @@ benchgate:
 
 ## Get the go tools
 .PHONY: gotools
-gotools:
-	$(GO) get -tool go.uber.org/mock/mockgen@latest
-	$(GO) get -tool golang.org/x/vuln/cmd/govulncheck@latest
-	$(GO) get -tool golang.org/x/perf/cmd/benchstat@latest
-	$(GO) install github.com/jstemmer/go-junit-report/v2@latest
+gotools: ensuretarget
+	GOBIN="$(CURDIR)/$(BINUTIL)" $(GO) -C "$(GOTOOLSDIR)" install tool
 
 ## Update everything
 .PHONY: updateall
@@ -295,8 +320,8 @@ updateall: updatego updatelint updatemod
 .PHONY: updatego
 updatego:
 	$(eval LAST_GO_TOOLCHAIN=$(shell curl -s https://go.dev/dl/ | grep -oE 'go[0-9]+\.[0-9]+\.[0-9]+\.linux-amd64\.tar\.gz' | head -n 1 | grep -oE 'go[0-9]+\.[0-9]+\.[0-9]+'))
-	$(eval LAST_GO_VERSION=$(shell echo ${LAST_GO_TOOLCHAIN} | grep -oE '[0-9]+\.[0-9]+'))
-	sed $(SEDINPLACE) "s|^go [0-9]*\.[0-9]*.*$$|go ${LAST_GO_VERSION}|g" go.mod
+# The `go` directive is the minimum version a consumer needs and is set
+# deliberately: it is not bumped here. Only the toolchain is updated.
 	sed $(SEDINPLACE) "s|^toolchain go[0-9]*\.[0-9]*\.[0-9]*$$|toolchain ${LAST_GO_TOOLCHAIN}|g" go.mod
 	cd examples/service && $(MAKE) updatego
 
@@ -312,6 +337,8 @@ updatelint:
 updatemod: mod
 	$(GO) get -t -u ./... && \
 	$(GO) mod tidy -compat=$(shell sed -n -E 's/^go ([0-9]+\.[0-9]+).*/\1/p' go.mod)
+	$(GO) -C "$(GOTOOLSDIR)" get -u tool && \
+	$(GO) -C "$(GOTOOLSDIR)" mod tidy
 	cd examples/service && $(MAKE) updatemod
 
 ## Update this library version in the examples

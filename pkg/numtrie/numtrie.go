@@ -66,6 +66,13 @@ place. Once the trie is fully built it may be queried concurrently by any number
 of goroutines via [Node.Get] and [Node.GetExact], provided no [Node.Add] runs
 concurrently.
 
+# When To Use
+
+  - You route on number prefixes, such as dialing codes or bank identifiers.
+  - Lookups must return the value for the longest matching prefix, not an
+    exact match.
+  - Keys may arrive as vanity phone numbers containing letters.
+
 [trie]: https://en.wikipedia.org/wiki/Trie
 */
 package numtrie

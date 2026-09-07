@@ -74,5 +74,11 @@ and handle both storage formats (SecretString and SecretBinary).
 [WithEndpointImmutable] customize the SDK client. [WithSecretsManagerClient]
 injects a client directly, in which case the AWS configuration is neither loaded
 nor used.
+
+# When To Use
+
+  - A secret is read on a request path and Secrets Manager charges per API
+    call.
+  - Rotation happens on a known schedule, so a bounded TTL is acceptable.
 */
 package awssecretcache

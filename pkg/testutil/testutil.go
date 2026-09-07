@@ -42,5 +42,13 @@ time-variant values in assertions.
 	_ = normalized
 
 These functions are intended for use in tests only.
+
+# When To Use
+
+  - An error branch depends on a failing Read or Close that is hard to
+    trigger otherwise.
+  - A JSON assertion contains a generated timestamp that must be normalized
+    first.
+  - A handler needs a real router because it reads path parameters.
 */
 package testutil

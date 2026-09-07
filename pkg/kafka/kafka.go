@@ -49,5 +49,13 @@ Configuration problems are reported at construction time with errors matching
 the exported sentinels [ErrInvalidOptions], [ErrNilEncodeFunc], and
 [ErrNilDecodeFunc]. After [Consumer.Close], the receive methods return errors
 matching [ErrConsumerClosed]. Match the sentinels with errors.Is.
+
+# When To Use
+
+  - You want a Kafka client that cross-compiles and needs no system library.
+  - Message payloads are structs and should be encoded and decoded
+    consistently.
+  - At-least-once delivery requires fetching and committing offsets
+    separately.
 */
 package kafka

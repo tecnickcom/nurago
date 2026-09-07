@@ -106,6 +106,11 @@ Function suffixes follow this pattern:
 
 	src := [8]byte{0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef}
 	uhex.Hex64BB(src, &dst)
+
+# When To Use
+
+  - IDs must render as a fixed number of hex digits, zero-padded.
+  - The encoding sits on a hot path and should not allocate.
 */
 package uhex
 

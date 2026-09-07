@@ -109,6 +109,13 @@ canceled acquisition, but cannot guarantee it if the connection is already
 unusable). Releasing also relies on the driver leaving the connection usable
 after canceling an in-flight keep-alive query. Configuring db.SetConnMaxLifetime
 bounds how long any such leaked lock can persist.
+
+# When To Use
+
+  - A scheduled job runs on every replica but must execute only once.
+  - You already depend on MySQL and do not want to add a coordination
+    service.
+  - The lock must be released automatically if the holder's connection dies.
 */
 package mysqllock
 

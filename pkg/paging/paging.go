@@ -47,6 +47,11 @@ For 17 items displayed 5 per page, navigating to page 3:
     float64 in some clients (e.g. JavaScript), which cannot represent values
     above 2^53 exactly. Realistic pagination magnitudes stay well below that;
     the math.MaxUint offset sentinel does not, so treat it as "no rows".
+
+# When To Use
+
+  - A list endpoint returns page metadata alongside results.
+  - You need the matching OFFSET and LIMIT for the query.
 */
 package paging
 

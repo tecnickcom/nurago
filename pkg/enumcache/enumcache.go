@@ -7,6 +7,12 @@ enum bitmaps when enum IDs represent bit flags.
 
 Typical usage is set-once, read-many: populate entries during startup using Set,
 SetAllIDByName, or SetAllNameByID, then perform lookups from application code.
+
+# When To Use
+
+  - Reference data maps small integer IDs to names and both directions are
+    queried.
+  - The set is loaded at startup and read constantly afterwards.
 */
 package enumcache
 

@@ -7,7 +7,7 @@ single wildcard route without manual per-handler registration.
 parameter from the httprouter request context and dispatches to the correct
 pprof handler. Registering one wildcard route is all that is needed:
 
-	router.GET("/pprof/*option", profiling.PProfHandler)
+	router.HandlerFunc(http.MethodGet, "/pprof/*option", profiling.PProfHandler)
 
 # Supported Endpoints
 
@@ -56,6 +56,13 @@ protect it with authentication middleware appropriate for your environment.
 The [github.com/tecnickcom/nurago/pkg/httpserver] package registers
 [PProfHandler] as the default pprof handler on its internal router. See
 pkg/httpserver/config.go for a complete integration example.
+
+# When To Use
+
+  - Your service routes with httprouter and you want pprof without
+    registering each handler.
+  - pprof must be mounted on an internal admin server rather than on
+    http.DefaultServeMux.
 */
 package profiling
 
@@ -71,7 +78,7 @@ import (
 // [PProfHandler] reads to determine which pprof endpoint to serve. Routes must
 // be registered using exactly this name:
 //
-//	router.GET("/pprof/*"+profiling.WildcardParamName, profiling.PProfHandler)
+//	router.HandlerFunc(http.MethodGet, "/pprof/*"+profiling.WildcardParamName, profiling.PProfHandler)
 const WildcardParamName = "option"
 
 // PProfHandler is an [http.HandlerFunc] that exposes all pprof profiling
@@ -80,7 +87,7 @@ const WildcardParamName = "option"
 // Register it with an httprouter-compatible router using a wildcard route
 // whose parameter is named [WildcardParamName]:
 //
-//	router.GET("/pprof/*option", profiling.PProfHandler)
+//	router.HandlerFunc(http.MethodGet, "/pprof/*option", profiling.PProfHandler)
 //
 // The `*option` wildcard determines which pprof handler is invoked:
 //   - ""          → [pprof.Index]  (the interactive profile listing page)

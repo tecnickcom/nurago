@@ -45,6 +45,14 @@ goroutine and [Periodic.Stop] shuts it down:
   - task must not be nil.
   - task must not panic: it runs in the background goroutine with no recovery,
     so a panic crashes the process (recover inside the task if needed).
+
+# When To Use
+
+  - A background job refreshes a cache, prunes a table, or emits a heartbeat
+    on a schedule.
+  - Multiple replicas run the same job and should not all fire at the same
+    instant.
+  - A single slow run must not stall every subsequent run.
 */
 package periodic
 

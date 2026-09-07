@@ -59,5 +59,10 @@ Custom format:
 	type Report struct {
 	    Month timeutil.DateTime[TYearMonth] `json:"month"`
 	}
+
+# When To Use
+
+  - An API expects durations as "1h30m" rather than as nanosecond integers.
+  - Timestamps must use a format other than RFC 3339, chosen at compile time.
 */
 package timeutil

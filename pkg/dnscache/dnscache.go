@@ -38,6 +38,12 @@ matching family.
 measured from the failed refresh, so rarely resolved hosts are protected too.
 [WithStaleIfError] is the RFC 5861 variant, whose window is measured from the
 addresses' original expiry.
+
+# When To Use
+
+  - A client dials the same hostnames repeatedly and resolver latency is
+    measurable.
+  - Concurrent lookups of the same name should collapse into one query.
 */
 package dnscache
 

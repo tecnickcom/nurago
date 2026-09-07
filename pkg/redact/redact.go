@@ -1,6 +1,9 @@
 /*
-Package redact provides pattern-based redaction utilities for obscuring
-sensitive data before logging or debugging output is emitted.
+Package redact removes secrets from log lines and HTTP dumps before they are
+emitted.
+
+Every pattern is matched in a single pass over the input, so the cost does not
+grow with the number of patterns enabled.
 
 # API
 
@@ -213,5 +216,12 @@ bot tokens (digits:base64 collides with host:port shapes) and bare
 "Basic <base64>" blobs in prose (header-positioned Basic credentials are
 covered by the Authorization rule); obsolete obs-fold header continuation
 lines.
+
+# When To Use
+
+  - Request and response dumps reach your logs and may contain credentials.
+  - You need coverage across headers, JSON bodies, form data, DSNs, JWTs, PEM
+    keys, and card numbers at once.
+  - Redaction runs on a hot path and must not allocate per pattern.
 */
 package redact

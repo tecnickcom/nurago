@@ -101,6 +101,13 @@ Functional options allow custom behavior without replacing core handlers:
     token, at debug level. Where debug logs are retained, disable them or pass a
     redacting logger via [WithLogger] (see github.com/tecnickcom/nurago/pkg/redact,
     which detects JWT compact serializations).
+
+# When To Use
+
+  - A service authenticates with username and password and issues short-lived
+    tokens.
+  - Protected endpoints authorize from the Authorization header.
+  - Tokens should be renewable near expiry without a fresh login.
 */
 package jwt
 

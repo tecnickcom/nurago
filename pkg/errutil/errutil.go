@@ -1,5 +1,6 @@
 /*
-Package errutil provides helpers for error handling in Go applications.
+Package errutil annotates errors with caller location, joins cleanup failures
+onto an existing error, and enumerates the errors inside an errors.Join value.
 
   - Trace annotates an error with runtime caller metadata (file, line, function)
     while preserving the original error with %w wrapping, so errors.Is and
@@ -11,5 +12,10 @@ Package errutil provides helpers for error handling in Go applications.
     value, returning a single-element slice for a plain error and nil for nil.
   - Trace(nil) returns nil, and JoinFnError supports nil and non-nil combinations
     through errors.Join semantics.
+
+# When To Use
+
+  - Errors cross several layers and the origin must survive the trip.
+  - You want consistent wrapping rather than ad-hoc fmt.Errorf calls.
 */
 package errutil

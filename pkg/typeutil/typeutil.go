@@ -1,7 +1,6 @@
 /*
-Package typeutil provides type-handling helpers for Go generics code: detecting
-nil through interfaces, obtaining zero values generically, dereferencing
-pointers safely, and converting booleans to integers without a branch.
+Package typeutil detects nil through interfaces, obtains zero values generically,
+dereferences pointers safely, and converts booleans to integers without a branch.
 
   - [IsNil]: reflection-based nil check that handles all nilable kinds (chan,
     func, interface, map, pointer, slice, unsafe pointer) and the untyped nil
@@ -37,6 +36,12 @@ pointers safely, and converting booleans to integers without a branch.
 
 	// Branch-free bool-to-int:
 	score += typeutil.BoolToInt(isBonus) * bonusPoints
+
+# When To Use
+
+  - Generic code must detect nil through an interface, where == nil is not
+    enough.
+  - You need the zero value of a type parameter.
 */
 package typeutil
 

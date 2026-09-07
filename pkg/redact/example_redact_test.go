@@ -121,7 +121,7 @@ func ExampleRedactor_String() {
 
 func ExampleRedactor_BytesToString() {
 	// BytesToString is the preferred form when the caller already holds a
-	// []byte — for example a dump from httputil.DumpRequest — and needs a
+	// []byte, for example a dump from httputil.DumpRequest, and needs a
 	// string for the log record. Its method value satisfies the RedactFn
 	// option of httpclient, httpserver, and httpreverseproxy.
 	dump := []byte("POST /login HTTP/1.1\nAuthorization: Bearer SECRET\n\npassword=SECRET")

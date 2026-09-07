@@ -1,4 +1,4 @@
-//go:generate go tool mockgen -write_package_comment=false -package httpserver -destination ./mock_test.go . Binder
+//go:generate mockgen -write_package_comment=false -package httpserver -destination ./mock_test.go . Binder
 
 package httpserver
 

@@ -54,6 +54,13 @@ reachable from the public internet, or protect them with authentication
 middleware appropriate for your environment.
 
 For a usage example, refer to examples/service/internal/cli/bind.go.
+
+# When To Use
+
+  - A service needs a server with sane timeouts, health endpoints, and pprof
+    mounted correctly.
+  - Shutdown must drain in-flight requests before the process exits.
+  - You want the routing to stay httprouter, not a framework.
 */
 package httpserver
 

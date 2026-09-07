@@ -25,6 +25,10 @@ jobs:
           cache: true
       - name: linter
         run: make mod deps linter govulncheck GOPATH=$(go env GOPATH)
+      - name: generated documentation is up to date
+        run: make gendoccheck GOPATH=$(go env GOPATH)
+      - name: go.mod and go.sum are tidy
+        run: make modcheck GOPATH=$(go env GOPATH)
 
   test:
     runs-on: ubuntu-latest

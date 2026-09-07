@@ -24,5 +24,11 @@ The client supports dependency injection and runtime tuning via options:
 
 Jira Server REST API reference:
   - https://docs.atlassian.com/software/jira/docs/api/REST/9.17.0/
+
+# When To Use
+
+  - A service reads or updates Jira issues.
+  - You want authentication, retries, and encoding handled, while choosing
+    the endpoint yourself.
 */
 package jirasrv

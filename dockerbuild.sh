@@ -20,8 +20,6 @@ set -e -u +x
 : ${PROJECT:=project}
 : ${DOCKERTAG:=dev}
 : ${MAKETARGET:=format clean ensuretarget mod deps generate qa example}
-: ${SSH_PRIVATE_KEY:=$(cat ~/.ssh/id_rsa || cat ~/.ssh/id_ed25519)}
-: ${SSH_PUBLIC_KEY:=$(cat ~/.ssh/id_rsa.pub || cat ~/.ssh/id_ed25519.pub)}
 : ${DOCKER:=$(which docker)}
 : ${DOCKERDEV:=${VENDOR}/dev_${PROJECT}:${DOCKERTAG}}
 
@@ -39,23 +37,10 @@ trap 'rm -f Dockerfile.test' EXIT
 #       so in case of error we can continue without interrupting this script.
 cat > Dockerfile.test <<- EOM
 FROM ${DOCKERDEV}
-ARG SSH_PRIVATE_KEY=""
-ARG SSH_PUBLIC_KEY=""
 RUN \\
-mkdir -p /root/.ssh \\
-&& echo "\${SSH_PRIVATE_KEY}" > /root/.ssh/id_rsa \\
-&& echo "\${SSH_PUBLIC_KEY}" > /root/.ssh/id_rsa.pub \\
-&& echo "Host *" >> /root/.ssh/config \\
-&& echo "    StrictHostKeyChecking no" >> /root/.ssh/config \\
-&& echo "    GlobalKnownHostsFile  /dev/null" >> /root/.ssh/config \\
-&& echo "    UserKnownHostsFile    /dev/null" >> /root/.ssh/config \\
-&& chmod 600 /root/.ssh/id_rsa \\
-&& chmod 644 /root/.ssh/id_rsa.pub \\
-&& echo "[user]" >> /root/.gitconfig \\
+echo "[user]" >> /root/.gitconfig \\
 && echo "	email = godev@example.com" >> /root/.gitconfig \\
 && echo "	name = godevlocaltestuser" >> /root/.gitconfig \\
-&& echo "[url \"ssh://git@${CVSPATH}\"]" >> /root/.gitconfig \\
-&& echo "	insteadOf = https://${CVSPATH}" >> /root/.gitconfig \\
 && mkdir -p ${PRJPATH}
 COPY ./ ${PRJPATH}
 WORKDIR ${PRJPATH}
@@ -70,8 +55,6 @@ DOCKER_IMAGE_NAME=${VENDOR}/build_${PROJECT}:${DOCKERTAG}
 BUILDKIT_PROGRESS=plain \
 ${DOCKER} build \
 --no-cache \
---build-arg SSH_PRIVATE_KEY="${SSH_PRIVATE_KEY}" \
---build-arg SSH_PUBLIC_KEY="${SSH_PUBLIC_KEY}" \
 --tag ${DOCKER_IMAGE_NAME} \
 --file Dockerfile.test .
 

@@ -1,5 +1,6 @@
 /*
-Package maputil provides generic functional-style helpers for Go maps.
+Package maputil filters, maps, reduces, and inverts Go maps with generic
+functions.
 
 It offers a small set of generic, allocation-conscious helpers:
   - [Filter] keeps entries matching a predicate.
@@ -17,6 +18,12 @@ Go map iteration order is intentionally randomized. Therefore:
     order-independent (for example, commutative/associative operations).
   - [Map] and [Invert] follow "last write wins" semantics when multiple input
     entries map to the same output key.
+
+# When To Use
+
+  - You transform, filter, or invert maps regularly.
+  - You want the operation expressed once rather than as a loop at each call
+    site.
 */
 package maputil
 

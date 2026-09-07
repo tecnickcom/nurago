@@ -26,6 +26,15 @@ Concrete implementations are available in sibling packages:
   - github.com/tecnickcom/nurago/pkg/metrics/statsd
   - github.com/tecnickcom/nurago/pkg/metrics/prometheus
   - github.com/tecnickcom/nurago/pkg/metrics/opentel
+
+# When To Use
+
+  - You want to swap Prometheus for OpenTelemetry without touching handler
+    code.
+  - Tests should run against a no-op implementation rather than a live
+    backend.
+  - Library code needs to emit metrics without dictating the backend to its
+    callers.
 */
 package metrics
 

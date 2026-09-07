@@ -66,5 +66,12 @@ request (including one where the upstream returns a 4xx or 5xx response) produce
 entry here, because that is a successful round trip. Add access logging by wrapping
 [Client.ForwardRequest] in middleware, or set ModifyResponse on a proxy passed via
 [WithReverseProxy].
+
+# When To Use
+
+  - A service fronts an internal upstream and needs to forward requests with
+    consistent logging.
+  - You want httputil.ReverseProxy behavior without repeating the director
+    and error-handler boilerplate.
 */
 package httpreverseproxy

@@ -1,4 +1,4 @@
-//go:generate go tool mockgen -write_package_comment=false -package devlake -destination ./mock_test.go . HTTPClient
+//go:generate mockgen -write_package_comment=false -package devlake -destination ./mock_test.go . HTTPClient
 package devlake
 
 import (

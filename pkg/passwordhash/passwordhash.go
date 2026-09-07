@@ -129,6 +129,13 @@ login, re-hashing forever.
 Benchmark [Params.PasswordHash] on representative hardware and adjust via
 [WithTime], [WithMemory], and [WithThreads] so that hashing takes 0.5 to 1 s
 under your expected load.
+
+# When To Use
+
+  - You store user passwords and need a current, memory-hard algorithm.
+  - Hashes must be portable, in the standard PHC string format.
+  - Defense in depth calls for a pepper: an AES-GCM layer over the hash,
+    keyed outside the database.
 */
 package passwordhash
 

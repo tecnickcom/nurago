@@ -23,6 +23,11 @@ Create a resolver with New, then retrieve a single country with
 CountryByAlpha2Code, CountryByAlpha3Code, or CountryByNumericCode, or fetch
 filtered sets using CountriesByRegionCode, CountriesByStatusName, and related
 query methods.
+
+# When To Use
+
+  - You validate or expand country codes.
+  - The data should be compiled in rather than fetched.
 */
 package countrycode
 

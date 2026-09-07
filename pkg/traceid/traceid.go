@@ -51,6 +51,13 @@ Anywhere in the call chain (logging, metrics, business logic):
 At an outbound boundary (e.g. before calling a downstream service):
 
 	traceid.SetHTTPRequestHeaderFromContext(ctx, outboundReq, traceid.DefaultHeader, traceid.DefaultValue)
+
+# When To Use
+
+  - Log lines across a request must share one correlation ID.
+  - You want trace propagation without coupling business logic to a tracing
+    SDK.
+  - Downstream services expect the ID in a specific header.
 */
 package traceid
 

@@ -35,5 +35,11 @@ endpoint surfaces as [ErrInvalidResponse]. Match the sentinels with errors.Is.
 
 The default endpoint resolves standard ipify behavior. To force IPv6-capable
 resolution, point the client to `https://api64.ipify.org` via [WithURL].
+
+# When To Use
+
+  - A service needs to know its own egress address, for allow-listing or for
+    logging.
+  - You want a fallback value rather than an error when the lookup fails.
 */
 package ipify

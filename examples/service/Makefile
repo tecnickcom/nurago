@@ -40,14 +40,19 @@ TARGETDIR=target
 # Directory where to store binary utility tools
 BINUTIL=$(TARGETDIR)/binutil
 
+# Directory of the separate module declaring the build tools.
+# The tools are kept out of the main go.mod so that they stay out of the
+# module graph of anything importing this project.
+GOTOOLSDIR=$(CURDIR)/resources/tools
+
 # GO lang path
 ifeq ($(GOPATH),)
 	# extract the GOPATH
 	GOPATH=$(shell echo "$(CURDIR)" | sed 's|/src/.*||')
 endif
 
-# Add the GO binary dir in the PATH
-export PATH := $(GOPATH)/bin:$(PATH)
+# Add the GO binary dir and the local tool dir in the PATH
+export PATH := $(CURDIR)/$(BINUTIL):$(GOPATH)/bin:$(PATH)
 
 # Path for binary files (where the executable files will be installed)
 BINPATH=usr/bin/
@@ -156,7 +161,8 @@ GOTEST=$(GO) test
 GODOC=GOPATH="$(GOPATH)" $(shell which godoc)
 GOLANGCILINT=$(BINUTIL)/golangci-lint
 GOLANGCILINTVERSION=v2.13.2
-GOVULNCHECK=$(GO) tool govulncheck
+GOVULNCHECK=$(BINUTIL)/govulncheck
+GOJUNITREPORT=$(BINUTIL)/go-junit-report
 DOCKERIZEVERSION=v0.9.2
 
 # Current operating system and architecture as one string.
@@ -191,7 +197,7 @@ GOPKGS=$(shell $(GO) list $(CMDDIR)/... $(SRCDIR)/...)
 ifeq ($(strip $(DEVMODE)),LOCAL)
 	TESTEXTRACMD=&& $(GO) tool cover -func=$(TARGETDIR)/report/coverage.out
 else
-	TESTEXTRACMD=2>&1 | tee >(PATH="$(GOPATH)/bin:$(PATH)" go-junit-report > $(TARGETDIR)/test/report.xml); test $${PIPESTATUS[0]} -eq 0
+	TESTEXTRACMD=2>&1 | tee >($(GOJUNITREPORT) > $(TARGETDIR)/test/report.xml); test $${PIPESTATUS[0]} -eq 0
 endif
 
 # Specify api test configuration files to execute (venom YAML files or * for all)
@@ -645,7 +651,18 @@ linter:
 ## Download dependencies
 .PHONY: mod
 mod: gotools
-	$(GO) mod download all
+# Without arguments this downloads the modules required to build and test this
+# module. The "all" pattern additionally walks the module graph and writes
+# go.sum entries for modules no package here reaches.
+	$(GO) mod download
+
+## Check that go.mod and go.sum are tidy
+.PHONY: modcheck
+modcheck:
+# Reports what "go mod tidy" would change and fails if anything would, without
+# writing to go.mod or go.sum.
+	$(GO) mod tidy -diff -compat=$(shell sed -n -E 's/^go ([0-9]+\.[0-9]+).*/\1/p' go.mod)
+	$(GO) -C "$(GOTOOLSDIR)" mod tidy -diff
 
 ## Test the OpenAPI specification
 .PHONY: openapitest
@@ -729,13 +746,8 @@ bench: ensuretarget
 
 ## Get the go tools
 .PHONY: gotools
-gotools:
-	$(GO) get -tool go.uber.org/mock/mockgen@latest
-	$(GO) get -tool golang.org/x/vuln/cmd/govulncheck@latest
-	$(GO) install github.com/jstemmer/go-junit-report/v2@latest
-	$(GO) install github.com/hairyhenderson/gomplate/v4/cmd/gomplate@latest
-	$(GO) install github.com/mikefarah/yq/v4@latest
-	$(GO) install github.com/santhosh-tekuri/jsonschema/cmd/jv@latest
+gotools: ensuretarget
+	GOBIN="$(CURDIR)/$(BINUTIL)" $(GO) -C "$(GOTOOLSDIR)" install tool
 
 ## Remove all installed files (excluding configuration files)
 .PHONY: uninstall
@@ -751,8 +763,8 @@ updateall: updatego updatelint updatemod
 .PHONY: updatego
 updatego:
 	$(eval LAST_GO_TOOLCHAIN=$(shell curl -s https://go.dev/dl/ | grep -oE 'go[0-9]+\.[0-9]+\.[0-9]+\.linux-amd64\.tar\.gz' | head -n 1 | grep -oE 'go[0-9]+\.[0-9]+\.[0-9]+'))
-	$(eval LAST_GO_VERSION=$(shell echo ${LAST_GO_TOOLCHAIN} | grep -oE '[0-9]+\.[0-9]+'))
-	sed $(SEDINPLACE) "s|^go [0-9]*\.[0-9]*.*$$|go ${LAST_GO_VERSION}|g" go.mod
+# The `go` directive is the minimum version a consumer needs and is set
+# deliberately: it is not bumped here. Only the toolchain is updated.
 	sed $(SEDINPLACE) "s|^toolchain go[0-9]*\.[0-9]*\.[0-9]*$$|toolchain ${LAST_GO_TOOLCHAIN}|g" go.mod
 
 ## Update golangci-lint version
@@ -766,6 +778,8 @@ updatelint:
 updatemod: mod
 	$(GO) get -t -u ./... && \
 	go mod tidy -compat=$(shell sed -n -E 's/^go ([0-9]+\.[0-9]+).*/\1/p' go.mod)
+	$(GO) -C "$(GOTOOLSDIR)" get -u tool && \
+	$(GO) -C "$(GOTOOLSDIR)" mod tidy
 
 ## Run venom tests
 .PHONY: venomtest
