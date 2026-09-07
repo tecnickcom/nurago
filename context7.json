@@ -1,0 +1,22 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "nurago",
+  "description": "70 independent Go packages for backend services, each imported on its own and pulling only the dependencies it reaches. Previously named gogen. HTTP client, server and reverse proxy, retries and exponential backoff, OpenTelemetry and Prometheus instrumentation, structured logging and log redaction, JWT and Argon2id password hashing, Redis, Valkey, Kafka, AWS S3, SQS and Secrets Manager, SQL connections and transactions, caching, validation, configuration loading, and general-purpose encoding, string, slice, map and time utilities.",
+  "branch": "main",
+  "excludeFolders": [
+    ".github",
+    "resources",
+    "target"
+  ],
+  "excludeFiles": [
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md"
+  ],
+  "rules": [
+    "The module path is github.com/tecnickcom/nurago. The former github.com/tecnickcom/gogen path is deprecated and must not be used in new imports.",
+    "Import individual packages under pkg/, not the module root. Each package pulls only the dependencies it reaches, and 40 of the 70 reach no external module at all.",
+    "Packages that take configuration use variadic functional options: a New constructor with an opts ...Option parameter and WithXxx option functions.",
+    "The module is at v1 and every exported symbol under pkg/ is stable within v1. A high patch number reflects frequent additive releases, not API churn."
+  ]
+}
