@@ -1,7 +1,7 @@
 {
   "$schema": "https://context7.com/schema/context7.json",
   "projectTitle": "nurago",
-  "description": "70 independent Go packages for backend services, each imported on its own and pulling only the dependencies it reaches. Previously named gogen. HTTP client, server and reverse proxy, retries and exponential backoff, OpenTelemetry and Prometheus instrumentation, structured logging and log redaction, JWT and Argon2id password hashing, Redis, Valkey, Kafka, AWS S3, SQS and Secrets Manager, SQL connections and transactions, caching, validation, configuration loading, and general-purpose encoding, string, slice, map and time utilities.",
+  "description": "70 independent Go packages for backend services (formerly gogen): HTTP client and server, retries, OpenTelemetry, logging, JWT, password hashing, Redis, Valkey, Kafka, AWS, SQL, caching, config.",
   "branch": "main",
   "excludeFolders": [
     ".github",
