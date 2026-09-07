@@ -67,6 +67,9 @@ endif
 
 # Common commands
 GO=GOPATH="$(GOPATH)" $(shell which go)
+# Commands for the tools module. It may require a newer Go than this module, so
+# it selects its own toolchain regardless of the GOTOOLCHAIN in the environment.
+GOTOOLSMOD=GOTOOLCHAIN=auto $(GO) -C "$(GOTOOLSDIR)"
 GOVERSION=${shell go version | grep -Eo '(go[0-9]+.[0-9]+)'}
 GOFMT=$(shell which gofmt)
 GOTEST=$(GO) test
@@ -222,7 +225,7 @@ modcheck:
 # Reports what "go mod tidy" would change and fails if anything would, without
 # writing to go.mod or go.sum.
 	$(GO) mod tidy -diff -compat=$(shell sed -n -E 's/^go ([0-9]+\.[0-9]+).*/\1/p' go.mod)
-	$(GO) -C "$(GOTOOLSDIR)" mod tidy -diff
+	$(GOTOOLSMOD) mod tidy -diff
 
 ## Generate a new project from the example using the data set via CONFIG=project.cfg
 .PHONY: project
@@ -310,7 +313,7 @@ benchgate:
 ## Get the go tools
 .PHONY: gotools
 gotools: ensuretarget
-	GOBIN="$(CURDIR)/$(BINUTIL)" $(GO) -C "$(GOTOOLSDIR)" install tool
+	GOBIN="$(CURDIR)/$(BINUTIL)" $(GOTOOLSMOD) install tool
 
 ## Update everything
 .PHONY: updateall
@@ -322,7 +325,7 @@ updatego:
 	$(eval LAST_GO_TOOLCHAIN=$(shell curl -s https://go.dev/dl/ | grep -oE 'go[0-9]+\.[0-9]+\.[0-9]+\.linux-amd64\.tar\.gz' | head -n 1 | grep -oE 'go[0-9]+\.[0-9]+\.[0-9]+'))
 # The `go` directive is the minimum version a consumer needs and is set
 # deliberately: it is not bumped here. Only the toolchain is updated.
-	sed $(SEDINPLACE) "s|^toolchain go[0-9]*\.[0-9]*\.[0-9]*$$|toolchain ${LAST_GO_TOOLCHAIN}|g" go.mod
+	sed $(SEDINPLACE) "s|^toolchain go[0-9]*\.[0-9]*\.[0-9]*$$|toolchain ${LAST_GO_TOOLCHAIN}|g" go.mod "$(GOTOOLSDIR)/go.mod"
 	cd examples/service && $(MAKE) updatego
 
 ## Update golangci-lint version
@@ -337,8 +340,8 @@ updatelint:
 updatemod: mod
 	$(GO) get -t -u ./... && \
 	$(GO) mod tidy -compat=$(shell sed -n -E 's/^go ([0-9]+\.[0-9]+).*/\1/p' go.mod)
-	$(GO) -C "$(GOTOOLSDIR)" get -u tool && \
-	$(GO) -C "$(GOTOOLSDIR)" mod tidy
+	$(GOTOOLSMOD) get -u tool && \
+	$(GOTOOLSMOD) mod tidy
 	cd examples/service && $(MAKE) updatemod
 
 ## Update this library version in the examples

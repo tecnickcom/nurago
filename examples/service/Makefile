@@ -155,6 +155,9 @@ DOCKERBUILDARG=--build-arg HOST_USER="$(shell id -u ${USER})" --build-arg HOST_G
 
 # Common commands
 GO=GOPATH="$(GOPATH)" GOPRIVATE=$(CVSPATH) $(shell which go)
+# Commands for the tools module. It may require a newer Go than this module, so
+# it selects its own toolchain regardless of the GOTOOLCHAIN in the environment.
+GOTOOLSMOD=GOTOOLCHAIN=auto $(GO) -C "$(GOTOOLSDIR)"
 GOVERSION=${shell go version | grep -Eo '(go[0-9]+.[0-9]+)'}
 GOFMT=$(shell which gofmt)
 GOTEST=$(GO) test
@@ -662,7 +665,7 @@ modcheck:
 # Reports what "go mod tidy" would change and fails if anything would, without
 # writing to go.mod or go.sum.
 	$(GO) mod tidy -diff -compat=$(shell sed -n -E 's/^go ([0-9]+\.[0-9]+).*/\1/p' go.mod)
-	$(GO) -C "$(GOTOOLSDIR)" mod tidy -diff
+	$(GOTOOLSMOD) mod tidy -diff
 
 ## Test the OpenAPI specification
 .PHONY: openapitest
@@ -747,7 +750,7 @@ bench: ensuretarget
 ## Get the go tools
 .PHONY: gotools
 gotools: ensuretarget
-	GOBIN="$(CURDIR)/$(BINUTIL)" $(GO) -C "$(GOTOOLSDIR)" install tool
+	GOBIN="$(CURDIR)/$(BINUTIL)" $(GOTOOLSMOD) install tool
 
 ## Remove all installed files (excluding configuration files)
 .PHONY: uninstall
@@ -765,7 +768,7 @@ updatego:
 	$(eval LAST_GO_TOOLCHAIN=$(shell curl -s https://go.dev/dl/ | grep -oE 'go[0-9]+\.[0-9]+\.[0-9]+\.linux-amd64\.tar\.gz' | head -n 1 | grep -oE 'go[0-9]+\.[0-9]+\.[0-9]+'))
 # The `go` directive is the minimum version a consumer needs and is set
 # deliberately: it is not bumped here. Only the toolchain is updated.
-	sed $(SEDINPLACE) "s|^toolchain go[0-9]*\.[0-9]*\.[0-9]*$$|toolchain ${LAST_GO_TOOLCHAIN}|g" go.mod
+	sed $(SEDINPLACE) "s|^toolchain go[0-9]*\.[0-9]*\.[0-9]*$$|toolchain ${LAST_GO_TOOLCHAIN}|g" go.mod "$(GOTOOLSDIR)/go.mod"
 
 ## Update golangci-lint version
 .PHONY: updatelint
@@ -777,9 +780,9 @@ updatelint:
 .PHONY: updatemod
 updatemod: mod
 	$(GO) get -t -u ./... && \
-	go mod tidy -compat=$(shell sed -n -E 's/^go ([0-9]+\.[0-9]+).*/\1/p' go.mod)
-	$(GO) -C "$(GOTOOLSDIR)" get -u tool && \
-	$(GO) -C "$(GOTOOLSDIR)" mod tidy
+	$(GO) mod tidy -compat=$(shell sed -n -E 's/^go ([0-9]+\.[0-9]+).*/\1/p' go.mod)
+	$(GOTOOLSMOD) get -u tool && \
+	$(GOTOOLSMOD) mod tidy
 
 ## Run venom tests
 .PHONY: venomtest

@@ -13,7 +13,7 @@ permissions:
 
 env:
   # Go version whose test run publishes the coverage report.
-  COVERAGE_GO_VERSION: '1.26.x'
+  COVERAGE_GO_VERSION: '1.27.x'
 
 jobs:
   lint:

@@ -2,6 +2,8 @@ module github.com/nuragoexampleowner/nuragoexample/resources/tools
 
 go 1.26.0
 
+toolchain go1.27.1
+
 tool (
 	github.com/hairyhenderson/gomplate/v4/cmd/gomplate
 	github.com/jstemmer/go-junit-report/v2

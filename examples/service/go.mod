@@ -2,6 +2,8 @@ module github.com/nuragoexampleowner/nuragoexample
 
 go 1.26.0
 
+toolchain go1.27.1
+
 replace github.com/tecnickcom/nurago => ../..
 
 require (

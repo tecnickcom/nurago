@@ -5,6 +5,8 @@ module github.com/tecnickcom/nurago/resources/tools
 
 go 1.26.0
 
+toolchain go1.27.1
+
 tool (
 	github.com/jstemmer/go-junit-report/v2
 	go.uber.org/mock/mockgen

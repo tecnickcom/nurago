@@ -2,6 +2,8 @@ module github.com/tecnickcom/nurago
 
 go 1.26.0
 
+toolchain go1.27.1
+
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/XSAM/otelsql v0.44.0
@@ -26,8 +28,8 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.12.1
-	github.com/tecnickcom/farmhash64 v1.10.3
-	github.com/tecnickcom/statsd v1.1.7
+	github.com/tecnickcom/farmhash64 v1.10.5
+	github.com/tecnickcom/statsd v1.1.9
 	github.com/undefinedlabs/go-mpatch v1.0.7
 	github.com/valkey-io/valkey-go v1.0.77
 	github.com/valkey-io/valkey-go/mock v1.0.77
