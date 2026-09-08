@@ -83,4 +83,5 @@ Importing this package pulls 3 external modules:
 ## Links
 
 - [Reference documentation](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/testutil)
+- [Package page](https://nurago.org/packages/testutil/)
 - [All nurago packages](../../README.md)

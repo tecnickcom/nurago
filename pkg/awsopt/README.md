@@ -107,4 +107,5 @@ Importing this package pulls 14 external modules:
 ## Links
 
 - [Reference documentation](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/awsopt)
+- [Package page](https://nurago.org/packages/awsopt/)
 - [All nurago packages](../../README.md)

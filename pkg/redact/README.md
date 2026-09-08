@@ -288,4 +288,5 @@ This package reaches no external module: it uses only the Go standard library.
 ## Links
 
 - [Reference documentation](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/redact)
+- [Package page](https://nurago.org/packages/redact/)
 - [All nurago packages](../../README.md)

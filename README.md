@@ -8,6 +8,8 @@
 > find . -name '*.go' -exec sed -i 's|github.com/tecnickcom/gogen|github.com/tecnickcom/nurago|g' {} +
 > go mod tidy
 > ```
+>
+> Full instructions: [Migration from gogen](https://nurago.org/docs/migration-from-gogen/).
 
 [![GitHub Release](https://img.shields.io/github/v/release/tecnickcom/nurago)](https://github.com/tecnickcom/nurago/releases)
 [![Go Reference](https://pkg.go.dev/badge/github.com/tecnickcom/nurago.svg)](https://pkg.go.dev/github.com/tecnickcom/nurago)
@@ -23,18 +25,21 @@ Each package is imported on its own and pulls only the dependencies it reaches, 
 
 *Why "nurago"?* From *nuraghe* + Go: the Bronze Age Sardinian stone towers, built without mortar, around 7,000 of which still stand after 3,500 years.
 
+Website: [nurago.org](https://nurago.org/)
+
 Source documentation: [pkg.go.dev/github.com/tecnickcom/nurago](https://pkg.go.dev/github.com/tecnickcom/nurago)
 
 ## Table of Contents
 
 1. [Installation](#installation)
-2. [Dependency Footprint](#dependency-footprint)
-3. [API Stability](#api-stability)
-4. [Package Catalog](#package-catalog)
-5. [Developers Quick Start](#developers-quick-start)
-6. [Running All Tests](#running-all-tests)
-7. [How To Create a New Web Service](#how-to-create-a-new-web-service)
-8. [Contributing](#contributing)
+2. [Documentation](#documentation)
+3. [Dependency Footprint](#dependency-footprint)
+4. [API Stability](#api-stability)
+5. [Package Catalog](#package-catalog)
+6. [Developers Quick Start](#developers-quick-start)
+7. [Running All Tests](#running-all-tests)
+8. [How To Create a New Web Service](#how-to-create-a-new-web-service)
+9. [Contributing](#contributing)
 
 ## Installation
 
@@ -60,6 +65,30 @@ service from a configuration file:
 ```bash
 make project CONFIG=project.cfg
 ```
+
+## Documentation
+
+Guides, package pages, and articles are published on
+[nurago.org](https://nurago.org/):
+
+- [Packages](https://nurago.org/packages/) - all packages, grouped by what they do.
+- [Getting started](https://nurago.org/docs/getting-started/) - installing, importing a package, and wiring a service lifecycle.
+- [Service scaffolding](https://nurago.org/docs/service-scaffolding/) - generating a complete web service with `make project`.
+- [Dependency footprint](https://nurago.org/docs/dependency-footprint/) - what each import pulls into the build, and how to verify it.
+- [Observability](https://nurago.org/docs/observability/) - logging, metrics backends, trace IDs, and log redaction.
+- [Resilience](https://nurago.org/docs/resilience/) - retries, backoff and jitter, periodic work, DNS caching.
+- [Security](https://nurago.org/docs/security/) - password storage, breach checks, JWT, encryption, private endpoints.
+- [Data and messaging](https://nurago.org/docs/data-and-messaging/) - SQL, locking, Redis, Valkey, Kafka, S3, SQS.
+- [Testing](https://nurago.org/docs/testing/) - test helpers, injectable clients, mocks, and the QA pipeline.
+- [Migration from gogen](https://nurago.org/docs/migration-from-gogen/) - moving off the deprecated `github.com/tecnickcom/gogen` module path.
+- [Development](https://nurago.org/docs/development/) - Makefile workflow, linting, coverage, benchmarks, Docker.
+- [AI coding assistants](https://nurago.org/docs/ai-assistants/) - `llms.txt`, MCP retrieval, project rules, and the facts to pin.
+- [Features](https://nurago.org/features/) - capability index, grouped by area.
+- [Comparison](https://nurago.org/comparison/) - nurago next to a framework, an internal library, and the standard library.
+- [Articles](https://nurago.org/articles/) - in-depth articles on the design of individual packages.
+
+A machine-readable index of every package is in [llms.txt](llms.txt), also
+served at [nurago.org/llms.txt](https://nurago.org/llms.txt).
 
 ## Dependency Footprint
 
@@ -103,6 +132,9 @@ ship as soon as they are ready. A high patch number does not indicate churn in
 the API.
 
 ## Package Catalog
+
+Each package also has a page on
+[nurago.org/packages](https://nurago.org/packages/).
 
 <!-- gendoc:catalog:start -->
 
@@ -376,4 +408,4 @@ $ make x
 
 ## Contributing
 
-Contributions are welcome. Please review [CONTRIBUTING.md](https://github.com/tecnickcom/nurago/blob/main/CONTRIBUTING.md) before opening a pull request.
+Contributions are welcome. Please review [CONTRIBUTING.md](https://github.com/tecnickcom/nurago/blob/main/CONTRIBUTING.md) and the [development guide](https://nurago.org/docs/development/) before opening a pull request.

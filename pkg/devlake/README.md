@@ -91,4 +91,5 @@ Importing this package pulls 9 external modules:
 ## Links
 
 - [Reference documentation](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/devlake)
+- [Package page](https://nurago.org/packages/devlake/)
 - [All nurago packages](../../README.md)

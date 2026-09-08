@@ -88,4 +88,5 @@ This package reaches no external module: it uses only the Go standard library.
 ## Links
 
 - [Reference documentation](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/traceid)
+- [Package page](https://nurago.org/packages/traceid/)
 - [All nurago packages](../../README.md)

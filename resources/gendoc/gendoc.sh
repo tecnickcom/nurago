@@ -9,6 +9,7 @@
 set -euo pipefail
 
 MODULE="github.com/tecnickcom/nurago"
+SITE="https://nurago.org"
 
 # Byte ordering for every sort: the output must not depend on the locale.
 unset LC_ALL
@@ -67,6 +68,7 @@ for dir in $(go list -f '{{.Dir}}' ./pkg/... | sed "s|^$PWD/||" | sort); do
 		echo '## Links'
 		echo
 		echo "- [Reference documentation](https://pkg.go.dev/$imp)"
+		echo "- [Package page]($SITE/packages/$name/)"
 		echo "- [All nurago packages]($(echo "$dir" | sed 's|[^/]*|..|g')/README.md)"
 	} >"$dir/README.md"
 done
@@ -138,6 +140,9 @@ rm -f /tmp/gendoc-cat.$$
 	echo "> own and pulls only its own dependencies; $zcount reach no external module at all."
 	echo
 	echo "Install: \`go get $MODULE\`"
+	echo "Website: $SITE/"
+	echo "Guides: $SITE/docs/"
+	echo "Package pages: $SITE/packages/"
 	echo "Reference documentation: https://pkg.go.dev/$MODULE"
 	echo
 	echo "## Packages"

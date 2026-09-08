@@ -146,4 +146,5 @@ Importing this package pulls 4 external modules:
 ## Links
 
 - [Reference documentation](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/bootstrap)
+- [Package page](https://nurago.org/packages/bootstrap/)
 - [All nurago packages](../../README.md)

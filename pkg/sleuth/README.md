@@ -117,4 +117,5 @@ Importing this package pulls 9 external modules:
 ## Links
 
 - [Reference documentation](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/sleuth)
+- [Package page](https://nurago.org/packages/sleuth/)
 - [All nurago packages](../../README.md)

@@ -133,4 +133,5 @@ Importing this package pulls 8 external modules:
 ## Links
 
 - [Reference documentation](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/validator)
+- [Package page](https://nurago.org/packages/validator/)
 - [All nurago packages](../../README.md)

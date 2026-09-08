@@ -97,4 +97,5 @@ Importing this package pulls 1 external module:
 ## Links
 
 - [Reference documentation](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/sqlxtransaction)
+- [Package page](https://nurago.org/packages/sqlxtransaction/)
 - [All nurago packages](../../README.md)

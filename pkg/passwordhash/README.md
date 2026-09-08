@@ -196,4 +196,5 @@ Importing this package pulls 2 external modules:
 ## Links
 
 - [Reference documentation](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/passwordhash)
+- [Package page](https://nurago.org/packages/passwordhash/)
 - [All nurago packages](../../README.md)

@@ -200,4 +200,5 @@ Importing this package pulls 1 external module:
 ## Links
 
 - [Reference documentation](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/jwt)
+- [Package page](https://nurago.org/packages/jwt/)
 - [All nurago packages](../../README.md)

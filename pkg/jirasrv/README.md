@@ -120,4 +120,5 @@ Importing this package pulls 9 external modules:
 ## Links
 
 - [Reference documentation](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/jirasrv)
+- [Package page](https://nurago.org/packages/jirasrv/)
 - [All nurago packages](../../README.md)

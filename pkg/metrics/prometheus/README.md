@@ -102,4 +102,5 @@ Importing this package pulls 10 external modules:
 ## Links
 
 - [Reference documentation](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/metrics/prometheus)
+- [Package page](https://nurago.org/packages/prometheus/)
 - [All nurago packages](../../../README.md)

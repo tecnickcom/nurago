@@ -153,4 +153,5 @@ Importing this package pulls 4 external modules:
 ## Links
 
 - [Reference documentation](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/redis)
+- [Package page](https://nurago.org/packages/redis/)
 - [All nurago packages](../../README.md)

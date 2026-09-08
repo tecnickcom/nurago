@@ -98,4 +98,5 @@ Importing this package pulls 1 external module:
 ## Links
 
 - [Reference documentation](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/healthcheck)
+- [Package page](https://nurago.org/packages/healthcheck/)
 - [All nurago packages](../../README.md)

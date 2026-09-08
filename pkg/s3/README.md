@@ -176,4 +176,5 @@ Importing this package pulls 18 external modules:
 ## Links
 
 - [Reference documentation](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/s3)
+- [Package page](https://nurago.org/packages/s3/)
 - [All nurago packages](../../README.md)

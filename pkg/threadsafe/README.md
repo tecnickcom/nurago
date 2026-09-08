@@ -75,4 +75,5 @@ This package reaches no external module: it uses only the Go standard library.
 ## Links
 
 - [Reference documentation](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/threadsafe)
+- [Package page](https://nurago.org/packages/threadsafe/)
 - [All nurago packages](../../README.md)

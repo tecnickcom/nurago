@@ -140,4 +140,5 @@ Importing this package pulls 28 external modules:
 ## Links
 
 - [Reference documentation](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/metrics/opentel)
+- [Package page](https://nurago.org/packages/opentel/)
 - [All nurago packages](../../../README.md)

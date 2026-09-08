@@ -1,5 +1,7 @@
 # How to Contribute
 
+The [development guide](https://nurago.org/docs/development/) describes the Makefile workflow, linting, coverage, and benchmarks.
+
 ## Add a new feature or change an existing one
 
 * Before writing any code please suggest the change by opening a new Feature Request [issue](https://github.com/tecnickcom/nurago/issues/new).

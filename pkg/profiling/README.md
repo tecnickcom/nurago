@@ -127,4 +127,5 @@ Importing this package pulls 1 external module:
 ## Links
 
 - [Reference documentation](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/profiling)
+- [Package page](https://nurago.org/packages/profiling/)
 - [All nurago packages](../../README.md)

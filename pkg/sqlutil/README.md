@@ -100,4 +100,5 @@ This package reaches no external module: it uses only the Go standard library.
 ## Links
 
 - [Reference documentation](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/sqlutil)
+- [Package page](https://nurago.org/packages/sqlutil/)
 - [All nurago packages](../../README.md)

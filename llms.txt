@@ -4,6 +4,9 @@
 > own and pulls only its own dependencies; 40 reach no external module at all.
 
 Install: `go get github.com/tecnickcom/nurago`
+Website: https://nurago.org/
+Guides: https://nurago.org/docs/
+Package pages: https://nurago.org/packages/
 Reference documentation: https://pkg.go.dev/github.com/tecnickcom/nurago
 
 ## Packages
