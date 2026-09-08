@@ -1,12 +1,8 @@
 MIT LICENSE
 
-Copyright (c) 2025-2026 Nicola Asuni - Tecnick.com LTD :
-    - All changes from 2025-11-01 after merging gosrvlib back into 
-      gogen (nurago from 2026-07-11) https://github.com/tecnickcom/nurago
-Copyright (c) 2020-2025 Vonage :
-    - gogen refactored and extended into https://github.com/Vonage/gosrvlib
-Copyright (c) 2014-2026 Nicola Asuni - Tecnick.com LTD :
-    - Original gogen project https://github.com/tecnickcom/nurago
+Copyright (c) 2025-2026 Nicola Asuni - Tecnick.com LTD - all changes from 2025-11-01 after merging gosrvlib back into gogen (nurago from 2026-07-11) https://github.com/tecnickcom/nurago
+Copyright (c) 2020-2025 Vonage - gogen refactored and extended into https://github.com/Vonage/gosrvlib
+Copyright (c) 2014-2026 Nicola Asuni - Tecnick.com LTD - original gogen project https://github.com/tecnickcom/nurago
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
