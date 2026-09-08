@@ -83,6 +83,13 @@ func TestParseTokenErrors(t *testing.T) {
 			wantErr: ErrMalformedToken,
 		},
 		{
+			// The header members parse, but the object is closed by the wrong
+			// delimiter, so the error surfaces on the closing token.
+			name:    "mismatched header delimiter",
+			token:   b64(`{"alg":"HS256"]`) + "." + b64("{}") + ".sig",
+			wantErr: ErrMalformedToken,
+		},
+		{
 			name:    "unexpected algorithm",
 			token:   b64(`{"alg":"HS384","typ":"JWT"}`) + "." + b64("{}") + ".sig",
 			wantErr: ErrUnexpectedSigningMethod,
