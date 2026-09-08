@@ -23,7 +23,7 @@ For cases where only SQL values are needed:
 
 	offset, limit := paging.ComputeOffsetAndLimit(currentPage, pageSize)
 
-## Example
+## Computed Values
 
 For 17 items displayed 5 per page, navigating to page 3:
 

@@ -99,7 +99,7 @@ errors.Is(err, `ErrInvalidFilter`) to return a generic rejection (for example an
 400) and log the detail server-side, rather than returning the underlying message,
 which may echo client input or internal type names.
 
-## Example
+## Rule Encoding
 
 The following pretty-printed JSON:
 

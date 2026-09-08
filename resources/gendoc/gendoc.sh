@@ -54,7 +54,12 @@ for dir in $(go list -f '{{.Dir}}' ./pkg/... | sed "s|^$PWD/||" | sort); do
 		if [ "$count" -eq 0 ]; then
 			echo "This package reaches no external module: it uses only the Go standard library."
 		else
-			echo "Importing this package pulls $count external modules:"
+			if [ "$count" -eq 1 ]; then
+				noun="module"
+			else
+				noun="modules"
+			fi
+			echo "Importing this package pulls $count external $noun:"
 			echo
 			printf '%s\n' "$mods" | sed 's/^/- `/;s/$/`/'
 		fi

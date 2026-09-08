@@ -11,7 +11,9 @@ list of [Option] values that tune the runtime behavior:
 
  1. A cancellable [context.Context] is created and threaded through the entire
     application via BindFunc.
- 2. A [metrics.Client] is created (Prometheus by default) and passed to BindFunc.
+ 2. A [metrics.Client] is created and passed to BindFunc. The default is
+    [metrics.Default], the no-op client, so bootstrap pulls in no metrics
+    backend of its own; [WithCreateMetricsClientFunc] supplies a real one.
  3. A [*slog.Logger] is created and passed to BindFunc.
     If a [logutil.Config] is provided with [WithLogConfig], the logger
     emits a metrics counter for every log line, broken down by level.

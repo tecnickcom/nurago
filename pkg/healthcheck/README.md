@@ -91,7 +91,7 @@ More runnable examples are on [pkg.go.dev](https://pkg.go.dev/github.com/tecnick
 
 ## Dependencies
 
-Importing this package pulls 1 external modules:
+Importing this package pulls 1 external module:
 
 - `github.com/julienschmidt/httprouter`
 
