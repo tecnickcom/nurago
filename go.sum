@@ -208,8 +208,8 @@ github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWD
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
 github.com/subosito/gotenv v1.6.0 h1:9NlTDc1FTs4qu0DDq7AEtTPNw6SVm7uBMsUCUjABIf8=
 github.com/subosito/gotenv v1.6.0/go.mod h1:Dk4QP5c2W3ibzajGcXpNraDfq2IrhjMIvMSWPKKo0FU=
-github.com/tecnickcom/farmhash64 v1.10.5 h1:Cq4RwBZ3bqz9z5rRG16CaMp5uld/Mw4ZYxmY60eZ/cw=
-github.com/tecnickcom/farmhash64 v1.10.5/go.mod h1:kpsNSnQHDDa4t9JrzBxO8Hg5AWgsHtDhuHW5lb3BUpU=
+github.com/tecnickcom/farmhash64 v1.10.6 h1:usp8uMmWWpTAKK9YjbRB35X+K94JgYGKt6+b6+nYHRQ=
+github.com/tecnickcom/farmhash64 v1.10.6/go.mod h1:kpsNSnQHDDa4t9JrzBxO8Hg5AWgsHtDhuHW5lb3BUpU=
 github.com/tecnickcom/statsd v1.1.9 h1:xY4GEqrh3wijz7aNGw85j+RUQriWv5j3RtOU56QTdK8=
 github.com/tecnickcom/statsd v1.1.9/go.mod h1:UTOZR4zH4hSQzYN84cS1mriU9Hejsj/4MHL5VRU5d0U=
 github.com/undefinedlabs/go-mpatch v1.0.7 h1:943FMskd9oqfbZV0qRVKOUsXQhTLXL0bQTVbQSpzmBs=

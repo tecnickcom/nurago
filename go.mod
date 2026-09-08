@@ -28,7 +28,7 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.12.1
-	github.com/tecnickcom/farmhash64 v1.10.5
+	github.com/tecnickcom/farmhash64 v1.10.6
 	github.com/tecnickcom/statsd v1.1.9
 	github.com/undefinedlabs/go-mpatch v1.0.7
 	github.com/valkey-io/valkey-go v1.0.77
