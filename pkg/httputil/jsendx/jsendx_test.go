@@ -77,6 +77,16 @@ func TestWrapNilInfo(t *testing.T) {
 	require.Equal(t, "data", resp.Data)
 }
 
+func TestWrapNonStandardStatusCode(t *testing.T) {
+	t.Parallel()
+
+	resp := Wrap(499, nil, "data")
+
+	require.NotNil(t, resp)
+	require.Equal(t, 499, resp.Code)
+	require.Equal(t, "Client Error", resp.Message)
+}
+
 func TestSendNilInfo(t *testing.T) {
 	t.Parallel()
 

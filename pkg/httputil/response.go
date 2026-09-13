@@ -21,6 +21,11 @@ const (
 	// MimeApplicationXML contains the mime type string for XML content.
 	MimeApplicationXML = "application/xml; charset=utf-8"
 
+	// MimeApplicationProblemJSON contains the mime type string for RFC 9457 problem
+	// details content. Unlike the other mime constants it carries no charset
+	// parameter: RFC 9457 registers the media type without one.
+	MimeApplicationProblemJSON = "application/problem+json"
+
 	// MimeTextPlain contains the mime type string for text content.
 	MimeTextPlain = "text/plain; charset=utf-8"
 )
@@ -110,6 +115,36 @@ func (sc *Status) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// statusCodeLimit is one past the highest assignable HTTP status code.
+const statusCodeLimit = 600
+
+// StatusText returns the standard reason phrase for statusCode, falling back to the
+// name of its RFC 9110 status class when net/http knows no phrase for the code.
+//
+// [http.StatusText] returns an empty string for non-standard codes such as 499 or 529,
+// which would leave a response body, log entry or message field with no description of
+// the status at all. Codes outside the 100-599 range yield "Unknown Status".
+func StatusText(statusCode int) string {
+	if s := http.StatusText(statusCode); s != "" {
+		return s
+	}
+
+	switch {
+	case statusCode < http.StatusContinue, statusCode >= statusCodeLimit:
+		return "Unknown Status"
+	case statusCode < http.StatusOK: // 1xx
+		return "Informational"
+	case statusCode < http.StatusMultipleChoices: // 2xx
+		return "Successful"
+	case statusCode < http.StatusBadRequest: // 3xx
+		return "Redirection"
+	case statusCode < http.StatusInternalServerError: // 4xx
+		return "Client Error"
+	default: // 5xx
+		return "Server Error"
+	}
+}
+
 // HTTPResp holds the configuration for the HTTP response methods.
 type HTTPResp struct {
 	logger *slog.Logger
@@ -127,12 +162,15 @@ func NewHTTPResp(l *slog.Logger) *HTTPResp {
 }
 
 // SendStatus writes HTTP status code with standard text and logs response entry.
+//
+// The body is the reason phrase from [StatusText], so a non-standard status code
+// still produces a description instead of an empty line.
 func (hr *HTTPResp) SendStatus(ctx context.Context, w http.ResponseWriter, statusCode int) {
 	defer hr.logResponse(ctx, statusCode, logKeyResponseDataText, "")
 
 	writeHeaders(w, statusCode, MimeTextPlain)
 
-	_, err := w.Write([]byte(http.StatusText(statusCode) + "\n"))
+	_, err := w.Write([]byte(StatusText(statusCode) + "\n"))
 	if err != nil {
 		hr.logger.With(slog.Any("error", err)).ErrorContext(ctx, "httputil.SendStatus()")
 	}
@@ -156,23 +194,27 @@ func (hr *HTTPResp) SendText(ctx context.Context, w http.ResponseWriter, statusC
 // marshaling failure produces a clean 500 Internal Server Error instead of a partial
 // or empty body sent under the requested (success) status code.
 func (hr *HTTPResp) SendJSON(ctx context.Context, w http.ResponseWriter, statusCode int, data any) {
-	body, err := json.Marshal(data)
-	if err != nil {
-		hr.logger.With(slog.Any("error", err)).ErrorContext(ctx, "httputil.SendJSON()")
-		hr.SendStatus(ctx, w, http.StatusInternalServerError)
+	hr.writeJSON(ctx, w, statusCode, MimeApplicationJSON, "httputil.SendJSON()", data)
+}
 
-		return
-	}
-
-	defer hr.logResponse(ctx, statusCode, logKeyResponseDataObject, data)
-
-	writeHeaders(w, statusCode, MimeApplicationJSON)
-
-	// Append the trailing newline to keep byte-compatibility with json.Encoder.Encode.
-	_, err = w.Write(append(body, '\n'))
-	if err != nil {
-		hr.logger.With(slog.Any("error", err)).ErrorContext(ctx, "httputil.SendJSON()")
-	}
+// SendJSONType encodes data as JSON with a caller-supplied content type, writes it with
+// cache-control headers, and logs the response entry.
+//
+// It serves JSON-based media types that have no dedicated method, such as
+// application/ld+json or any application/vnd.*+json variant. Use [HTTPResp.SendJSON]
+// for application/json and [HTTPResp.SendProblem] for application/problem+json.
+//
+// The payload is marshaled fully before any header or status code is written, so a
+// marshaling failure produces a clean 500 Internal Server Error instead of a partial
+// or empty body sent under the requested (success) status code.
+func (hr *HTTPResp) SendJSONType(
+	ctx context.Context,
+	w http.ResponseWriter,
+	statusCode int,
+	contentType string,
+	data any,
+) {
+	hr.writeJSON(ctx, w, statusCode, contentType, "httputil.SendJSONType()", data)
 }
 
 // SendXML encodes data as XML with header prefix, cache-control headers, and structured logging.
@@ -200,6 +242,42 @@ func (hr *HTTPResp) SendXML(ctx context.Context, w http.ResponseWriter, statusCo
 	_, err = w.Write(buf.Bytes())
 	if err != nil {
 		hr.logger.With(slog.Any("error", err)).ErrorContext(ctx, "httputil.SendXML()")
+	}
+}
+
+// writeJSON encodes data as JSON and writes it under contentType with cache-control
+// headers, logging the response entry. It backs [HTTPResp.SendJSON],
+// [HTTPResp.SendJSONType] and [HTTPResp.SendProblem].
+//
+// The payload is marshaled fully before any header or status code is written, so a
+// marshaling failure produces a clean 500 Internal Server Error instead of a partial
+// or empty body sent under the requested (success) status code.
+//
+// logName names the calling method in error log entries.
+func (hr *HTTPResp) writeJSON(
+	ctx context.Context,
+	w http.ResponseWriter,
+	statusCode int,
+	contentType string,
+	logName string,
+	data any,
+) {
+	body, err := json.Marshal(data)
+	if err != nil {
+		hr.logger.With(slog.Any("error", err)).ErrorContext(ctx, logName)
+		hr.SendStatus(ctx, w, http.StatusInternalServerError)
+
+		return
+	}
+
+	defer hr.logResponse(ctx, statusCode, logKeyResponseDataObject, data)
+
+	writeHeaders(w, statusCode, contentType)
+
+	// Append the trailing newline to keep byte-compatibility with json.Encoder.Encode.
+	_, err = w.Write(append(body, '\n'))
+	if err != nil {
+		hr.logger.With(slog.Any("error", err)).ErrorContext(ctx, logName)
 	}
 }
 
@@ -250,7 +328,7 @@ func (hr *HTTPResp) logResponse(ctx context.Context, statusCode int, dataKey str
 
 	attrs := []slog.Attr{
 		slog.Int("response_code", statusCode),
-		slog.String("response_message", http.StatusText(statusCode)),
+		slog.String("response_message", StatusText(statusCode)),
 		slog.Any("response_status", Status(statusCode)),
 		slog.Time("response_time", resTime),
 		slog.Duration("response_duration", resTime.Sub(reqTime)),

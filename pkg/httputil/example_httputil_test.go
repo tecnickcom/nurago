@@ -49,6 +49,41 @@ func ExampleNewHTTPResp() {
 	// Output: {"message":"hello"}
 }
 
+func ExampleNewProblem() {
+	p := httputil.NewProblem(http.StatusConflict, "", "", "slot already booked")
+	p.Instance = "/bookings/42"
+
+	// An empty type URI becomes about:blank and an empty title the status text.
+	fmt.Printf("%s | %s | %d\n", p.Type, p.Title, p.Status)
+
+	// Output: about:blank | Conflict | 409
+}
+
+func ExampleHTTPResp_SendProblem() {
+	// Extension members are added by embedding Problem in an outer struct; the
+	// promoted fields stay inline in the encoded object.
+	type conflict struct {
+		httputil.Problem
+
+		ConflictingBookingID string `json:"conflicting_booking_id"`
+	}
+
+	res := httputil.NewHTTPResp(slog.New(slog.DiscardHandler))
+
+	rr := httptest.NewRecorder()
+	res.SendProblem(context.Background(), rr, http.StatusConflict, conflict{
+		Problem:              httputil.NewProblem(http.StatusConflict, "", "", "slot already booked"),
+		ConflictingBookingID: "b-17",
+	})
+
+	fmt.Println(rr.Header().Get("Content-Type"))
+	fmt.Print(rr.Body.String())
+
+	// Output:
+	// application/problem+json
+	// {"type":"about:blank","title":"Conflict","status":409,"detail":"slot already booked","conflicting_booking_id":"b-17"}
+}
+
 func ExampleNewResponseWriterWrapper() {
 	// Middleware wraps the writer to observe the status and byte size a handler produced.
 	rr := httptest.NewRecorder()

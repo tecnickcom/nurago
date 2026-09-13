@@ -82,6 +82,10 @@ type AppInfo struct {
 //
 // A nil info is treated as an empty [AppInfo] so the response is still produced
 // (with empty program metadata) instead of panicking.
+//
+// Message is filled from [httputil.StatusText], so a non-standard statusCode gets its
+// status class name rather than an empty string: the JSend envelope always carries the
+// member, so leaving it blank tells a consumer nothing.
 func Wrap(statusCode int, info *AppInfo, data any) *Response {
 	if info == nil {
 		info = &AppInfo{}
@@ -97,7 +101,7 @@ func Wrap(statusCode int, info *AppInfo, data any) *Response {
 		Timestamp: now.UnixNano(),
 		Status:    httputil.Status(statusCode),
 		Code:      statusCode,
-		Message:   http.StatusText(statusCode),
+		Message:   httputil.StatusText(statusCode),
 		Data:      data,
 	}
 }

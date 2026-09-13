@@ -81,6 +81,57 @@ func TestSendStatus(t *testing.T) {
 	require.Equal(t, http.StatusText(http.StatusUnauthorized)+"\n", string(body))
 }
 
+func TestSendStatus_nonStandardCode(t *testing.T) {
+	t.Parallel()
+
+	res := NewHTTPResp(nil)
+
+	rr := httptest.NewRecorder()
+	res.SendStatus(t.Context(), rr, 499)
+
+	resp := rr.Result()
+	require.NotNil(t, resp)
+
+	defer func() {
+		err := resp.Body.Close()
+		require.NoError(t, err, "error closing resp.Body")
+	}()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	require.Equal(t, 499, resp.StatusCode)
+	require.Equal(t, "Client Error\n", string(body))
+}
+
+func TestStatusText(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		statusCode int
+		want       string
+	}{
+		{name: "known code uses the standard phrase", statusCode: http.StatusTeapot, want: "I'm a teapot"},
+		{name: "unknown 1xx", statusCode: 109, want: "Informational"},
+		{name: "unknown 2xx", statusCode: 209, want: "Successful"},
+		{name: "unknown 3xx", statusCode: 309, want: "Redirection"},
+		{name: "unknown 4xx", statusCode: 499, want: "Client Error"},
+		{name: "unknown 5xx", statusCode: 529, want: "Server Error"},
+		{name: "below the first class", statusCode: 99, want: "Unknown Status"},
+		{name: "above the last class", statusCode: 600, want: "Unknown Status"},
+		{name: "zero", statusCode: 0, want: "Unknown Status"},
+		{name: "negative", statusCode: -1, want: "Unknown Status"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			require.Equal(t, tt.want, StatusText(tt.statusCode))
+		})
+	}
+}
+
 func TestSendText(t *testing.T) {
 	t.Parallel()
 
