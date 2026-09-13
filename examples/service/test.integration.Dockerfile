@@ -10,6 +10,7 @@ RUN mkdir /workspace
 # Add only the required project resources
 COPY resources /workspace/resources
 COPY openapi*.yaml /workspace/
+COPY schemathesis.toml /workspace
 COPY Makefile /workspace
 COPY RELEASE /workspace
 COPY VERSION /workspace

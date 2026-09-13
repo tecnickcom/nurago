@@ -5,10 +5,15 @@ services:
     environment:
       DEPLOY_ENV: "local"
     restart: always
+    # The service waits for the migrations to complete, not just to start:
+    # it serves endpoints that read and write the migrated tables.
     depends_on:
-      - nuragoexample_smocker_ipify
-      - nuragoexample_mysql
-      - nuragoexample_flyway_mysql
+      nuragoexample_smocker_ipify:
+        condition: service_started
+      nuragoexample_mysql:
+        condition: service_healthy
+      nuragoexample_flyway_mysql:
+        condition: service_completed_successfully
     env_file:
       - target/nuragoexample.cfg.env
     entrypoint: [

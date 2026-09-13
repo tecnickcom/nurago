@@ -1,0 +1,30 @@
+# Configuration for the schemathesis contract tests run by `make openapitest`.
+#
+# The check selection lives here rather than on the schemathesis command line:
+# a --checks flag on the command line replaces the settings below, including
+# the per-operation overrides, so the two cannot be combined.
+
+[checks]
+not_a_server_error.enabled = true
+status_code_conformance.enabled = true
+content_type_conformance.enabled = true
+response_headers_conformance.enabled = true
+response_schema_conformance.enabled = true
+negative_data_rejection.enabled = true
+positive_data_acceptance.enabled = true
+missing_required_header.enabled = true
+unsupported_method.enabled = true
+allow_header_conformance.enabled = true
+use_after_free.enabled = true
+ensure_resource_availability.enabled = true
+ignored_auth.enabled = true
+
+[[operations]]
+include-name = "GET /items"
+# A query parameter is a string on the wire, so schemathesis cannot build a
+# type-violating value for the integer "limit" that a server could tell apart
+# from a valid one: negating the type of 2 yields "2", which is the same
+# request. The check reports that accepted request as a failure, so it is off
+# for this operation. Every other check still applies to it, and this one still
+# applies everywhere else.
+checks.negative_data_rejection.enabled = false

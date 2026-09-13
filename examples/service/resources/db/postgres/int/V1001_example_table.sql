@@ -1,5 +1,5 @@
 -- Insert sample data
-INSERT INTO users (name, email) VALUES
-('John Doe', 'john@example.com'),
-('Jane Smith', 'jane@example.com'),
-('Bob Johnson', 'bob@example.com');
+INSERT INTO item (id, name, quantity, created_at) VALUES
+('019813a0-0000-7000-8000-000000000001', 'seed-bolt',   17, '2025-01-01 00:00:01.000001+00'),
+('019813a0-0000-7000-8000-000000000002', 'seed-nut',    42, '2025-01-01 00:00:02.000002+00'),
+('019813a0-0000-7000-8000-000000000003', 'seed-washer',  8, '2025-01-01 00:00:03.000003+00');

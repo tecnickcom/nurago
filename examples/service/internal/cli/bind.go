@@ -11,6 +11,7 @@ import (
 	"github.com/nuragoexampleowner/nuragoexample/internal/db"
 	"github.com/nuragoexampleowner/nuragoexample/internal/httphandlerpriv"
 	"github.com/nuragoexampleowner/nuragoexample/internal/httphandlerpub"
+	"github.com/nuragoexampleowner/nuragoexample/internal/item"
 	instr "github.com/nuragoexampleowner/nuragoexample/internal/metrics"
 	"github.com/tecnickcom/nurago/pkg/bootstrap"
 	"github.com/tecnickcom/nurago/pkg/healthcheck"
@@ -176,17 +177,30 @@ func bindServiceHandlers(
 		return httpserver.NopBinder(), httpserver.NopBinder(), jsx.DefaultStatusHandler(appInfo), nil
 	}
 
-	// This example has no business logic, so the service is nil. In a real
-	// service, replace nil with your service implementation: this is the
-	// injection point for the private and public handlers (and where you would
-	// pass the database connections established by newDatabases).
-	serviceBinderPrivate := httphandlerpriv.New(nil, l)
-	serviceBinderPublic := httphandlerpub.New(nil, l)
-
-	healthchecks, err := newDatabases(ctx, cfg, l, mtr, wg, sc)
+	reldb, healthchecks, err := newDatabases(ctx, cfg, l, mtr, wg, sc)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
+	// The item feature needs a database. Without one the public handler is built
+	// with a nil service and the item routes stay unregistered; see BindHTTP.
+	//
+	// itemSvc must be declared as the interface type and left nil: assigning a
+	// nil *item.Service to it would produce a non-nil interface value, and the
+	// routes would register against a service that can only fail.
+	var itemSvc httphandlerpub.ItemService
+
+	if reldb.Enabled {
+		itemSvc = item.NewService(item.NewRepository(reldb.Main.DB(), reldb.Read.DB()))
+	} else {
+		l.InfoContext(ctx, "item endpoints disabled: no database configured")
+	}
+
+	// The private server has no business logic in this example, so its service is
+	// nil. In a real service, replace nil with your service implementation: this
+	// is the injection point for the private handlers.
+	serviceBinderPrivate := httphandlerpriv.New(nil, l)
+	serviceBinderPublic := httphandlerpub.New(itemSvc, l)
 
 	// override the default status handler with a dependency-aware health check
 	healthCheckHandler := healthcheck.NewHandler(
@@ -201,8 +215,9 @@ func bindServiceHandlers(
 // newDatabases connects, instruments, and health-checks the main and read
 // databases when the database is enabled.
 //
-// It returns the health checks to register with the status handler. When the
-// database is disabled it returns an empty (non-nil) slice and no error.
+// It returns the connections for the handlers to use and the health checks to
+// register with the status handler. When the database is disabled it returns a
+// disabled Databases value, an empty (non-nil) slice, and no error.
 func newDatabases(
 	ctx context.Context,
 	cfg *appConfig,
@@ -210,38 +225,32 @@ func newDatabases(
 	mtr instr.Metrics,
 	wg *sync.WaitGroup,
 	sc chan struct{},
-) ([]healthcheck.HealthCheck, error) {
+) (db.Databases, []healthcheck.HealthCheck, error) {
 	healthchecks := []healthcheck.HealthCheck{}
+	reldb := db.Databases{Enabled: cfg.DB.Enabled}
 
 	if !cfg.DB.Enabled {
-		return healthchecks, nil
+		return reldb, healthchecks, nil
 	}
-
-	// reldb holds the database connections. In this example they are wired only
-	// into health checks and graceful shutdown (below and inside newDatabase); a
-	// real service would also pass reldb to the private and public handlers.
-	reldb := db.Databases{Enabled: cfg.DB.Enabled}
 
 	var err error
 
 	reldb.Main, healthchecks, err = newDatabase(ctx, "main", cfg.DB.Main, healthchecks, mtr, wg, sc)
 	if err != nil {
-		return nil, err
+		return db.Databases{}, nil, err
 	}
 
 	reldb.Read, healthchecks, err = newDatabase(ctx, "read", cfg.DB.Read, healthchecks, mtr, wg, sc)
 	if err != nil {
-		return nil, err
+		return db.Databases{}, nil, err
 	}
 
-	// This example has no handlers to inject reldb into (see above), so it simply
-	// confirms the connections were established.
 	l.InfoContext(ctx, "database connections established",
 		slog.Bool("main", reldb.Main != nil),
 		slog.Bool("read", reldb.Read != nil),
 	)
 
-	return healthchecks, nil
+	return reldb, healthchecks, nil
 }
 
 // newLogRedactor builds the redactor that sanitizes the HTTP request and
@@ -350,13 +359,13 @@ func newDatabase(
 	// falls back to the configured db.*.driver when the prefix is absent (the
 	// plain MySQL DSN format has no "://").
 	//
-	// The commented-out DSN suffix below is MySQL-specific: it is required to
-	// correctly parse time.Time and for SQLX to work properly with projections
-	// that use joins. It is left disabled because this example ships without a
-	// live database; enable it (or adapt it to your driver) for a real connection.
+	// Driver-specific DSN parameters belong in the configuration, not here:
+	// appending a MySQL query string in this shared function would break the
+	// Postgres DSNs the same code path supports. The MySQL configs set
+	// "?parseTime=true", which the driver needs to scan DATETIME columns into
+	// time.Time (and "columnsWithAlias=true" is what SQLX needs for projections
+	// that use joins).
 	// Ref.: https://pkg.go.dev/github.com/go-sql-driver/mysql#readme-usage
-	dbDSN := dbcfg.DSN // + "?parseTime=true&columnsWithAlias=true"
-
 	sqlConnOpts := []sqlconn.Option{
 		sqlconn.WithDefaultDriver(dbcfg.Driver),
 		sqlconn.WithPingTimeout(time.Duration(dbcfg.TimeoutPing) * time.Second),
@@ -369,7 +378,7 @@ func newDatabase(
 		sqlconn.WithSQLOpenFunc(mtr.SqlOpen),
 	}
 
-	sqlConn, err := sqlconn.Connect(ctx, dbDSN, sqlConnOpts...)
+	sqlConn, err := sqlconn.Connect(ctx, dbcfg.DSN, sqlConnOpts...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to connect to %s DB: %w", name, err)
 	}

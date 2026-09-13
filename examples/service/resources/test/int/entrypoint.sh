@@ -16,8 +16,9 @@ curl -s -XPOST \
   --data-binary "@resources/test/int/smocker/ipify_apitest.yaml" \
   http://nuragoexample_smocker_ipify:8081/mocks
 
-# run tests
-DEPLOY_ENV=int make openapitest apitest
+# Run tests. The API tests come first: they assert on the seeded rows, and the
+# schemathesis run that follows creates and deletes rows of its own.
+DEPLOY_ENV=int make apitest openapitest
 
 # reset the report folder ownership to the host user/group.
 chown -R ${HOST_OWNER} /workspace/target/report/

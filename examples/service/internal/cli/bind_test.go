@@ -14,6 +14,7 @@ import (
 	"github.com/nuragoexampleowner/nuragoexample/internal/metrics"
 	"github.com/stretchr/testify/require"
 	"github.com/tecnickcom/nurago/pkg/bootstrap"
+	"github.com/tecnickcom/nurago/pkg/httputil"
 	"github.com/tecnickcom/nurago/pkg/httputil/jsendx"
 	libmtr "github.com/tecnickcom/nurago/pkg/metrics"
 )
@@ -34,23 +35,115 @@ func (c *mockMetricsClientError) SqlOpen(driverName, dsn string) (*sql.DB, error
 
 func (c *mockMetricsClientError) IncExampleCounter(_ string) {}
 
-//nolint:gocognit,gocyclo,cyclop,paralleltest,maintidx
+// newValidDBMock registers a sqlmock database for the given DSN, optionally
+// expecting the startup ping and health-check query.
+func newValidDBMock(t *testing.T, dsn string, expect bool) (sqlmock.Sqlmock, func()) {
+	t.Helper()
+
+	dbMockDB, dbMock, err := sqlmock.NewWithDSN(dsn, sqlmock.MonitorPingsOption(true))
+	require.NoError(t, err, "Unexpected error while creating sqlmock", err)
+
+	if expect {
+		dbMock.MatchExpectationsInOrder(false)
+		dbMock.ExpectPing().WillReturnError(nil)
+
+		rows := sqlmock.NewRows([]string{"1"}).AddRow("1")
+		dbMock.ExpectQuery("SELECT 1").WillReturnRows(rows)
+	}
+
+	return dbMock, func() {
+		_ = dbMockDB.Close()
+	}
+}
+
+// Test_bindServiceHandlers pins the requirement that the item endpoints are
+// registered only when a database is configured: with the database off the
+// public server exposes /uid alone.
+func Test_bindServiceHandlers(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		fcfg           func(cfg appConfig) appConfig
+		wantPubRoutes  int
+		wantPrivRoutes int
+	}{
+		{
+			name: "binds no routes with the service disabled",
+			fcfg: func(cfg appConfig) appConfig {
+				cfg.Enabled = false
+
+				return cfg
+			},
+			wantPubRoutes:  0,
+			wantPrivRoutes: 0,
+		},
+		{
+			name: "binds only /uid with the database disabled",
+			fcfg: func(cfg appConfig) appConfig {
+				cfg.Enabled = true
+				cfg.DB.Enabled = false
+
+				return cfg
+			},
+			wantPubRoutes:  1,
+			wantPrivRoutes: 1,
+		},
+		{
+			name: "binds the item routes with the database enabled",
+			fcfg: func(cfg appConfig) appConfig {
+				cfg.Enabled = true
+				cfg.DB.Enabled = true
+				cfg.DB.Main.DSN = "user:pass@tcp(host:3306)/database7"
+				cfg.DB.Read.DSN = "user:pass@tcp(host:3306)/database8"
+
+				return cfg
+			},
+			wantPubRoutes:  5,
+			wantPrivRoutes: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg := tt.fcfg(getValidTestConfig())
+			cfg.DB.Main.Driver = "sqlmock"
+			cfg.DB.Read.Driver = "sqlmock"
+
+			if cfg.DB.Enabled {
+				_, cleanupMain := newValidDBMock(t, cfg.DB.Main.DSN, true)
+				defer cleanupMain()
+
+				_, cleanupRead := newValidDBMock(t, cfg.DB.Read.DSN, true)
+				defer cleanupRead()
+			}
+
+			mtr := metrics.New()
+
+			_, err := mtr.CreateMetricsClientFunc()
+			require.NoError(t, err)
+
+			appInfo := &jsendx.AppInfo{ProgramName: "test", ProgramVersion: "0.0.0", ProgramRelease: "0"}
+			jsx := jsendx.NewJSXResp(httputil.NewHTTPResp(slog.Default()))
+
+			priv, pub, status, err := bindServiceHandlers(
+				t.Context(), &cfg, appInfo, jsx, slog.Default(), mtr, &sync.WaitGroup{}, make(chan struct{}),
+			)
+
+			require.NoError(t, err)
+			require.NotNil(t, status)
+			require.Len(t, priv.BindHTTP(t.Context()), tt.wantPrivRoutes)
+			require.Len(t, pub.BindHTTP(t.Context()), tt.wantPubRoutes)
+		})
+	}
+}
+
+//nolint:gocognit,paralleltest,maintidx
 func Test_bind(t *testing.T) {
 	validDBMock := func(dsn string, expect bool) (sqlmock.Sqlmock, func()) {
-		dbMockDB, dbMock, err := sqlmock.NewWithDSN(dsn, sqlmock.MonitorPingsOption(true))
-		require.NoError(t, err, "Unexpected error while creating sqlmock", err)
-
-		if expect {
-			dbMock.MatchExpectationsInOrder(false)
-			dbMock.ExpectPing().WillReturnError(nil)
-
-			rows := sqlmock.NewRows([]string{"1"}).AddRow("1")
-			dbMock.ExpectQuery("SELECT 1").WillReturnRows(rows)
-		}
-
-		return dbMock, func() {
-			_ = dbMockDB.Close()
-		}
+		return newValidDBMock(t, dsn, expect)
 	}
 
 	tests := []struct {

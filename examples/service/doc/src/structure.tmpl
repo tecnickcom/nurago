@@ -34,6 +34,7 @@ That structure matters because it lets you extend the example without mixing app
 | `openapi_public.yaml` | Public API contract for the externally exposed endpoints. |
 | `openapi_private.yaml` | Private API contract for internal endpoints. |
 | `openapi_monitoring.yaml` | Monitoring API contract for operational routes. |
+| `schemathesis.toml` | Check selection for the contract tests run against the OpenAPI specs. |
 | `test.integration.Dockerfile` | Container image definition used by integration scenarios. |
 | `README.md` | Generated top-level project guide for developers and operators. |
 
@@ -68,6 +69,7 @@ This folder contains the application-specific implementation details that should
 | `internal/db` | Shared database abstractions used by the service wiring. |
 | `internal/httphandlerpriv` | Private API route definitions and handlers. |
 | `internal/httphandlerpub` | Public API route definitions and handlers. |
+| `internal/item` | Example business domain: domain types, service rules, and the SQL repository behind the item endpoints. |
 | `internal/metrics` | Service-specific Prometheus collectors and instrumentation helpers layered on top of nurago metrics. |
 
 ### `resources`

@@ -12,7 +12,7 @@
       "conn_max_idle_time": 60,
       "conn_max_lifetime": 180,
       "conn_max_open": 10,
-      "dsn": "dbrw_user:dbrw_pass@tcp(nuragoexample_mysql:3306)/nuragoexample",
+      "dsn": "dbrw_user:dbrw_pass@tcp(nuragoexample_mysql:3306)/nuragoexample?parseTime=true",
       "timeout_ping": 2
     },
     "read": {
@@ -20,7 +20,7 @@
       "conn_max_idle_time": 60,
       "conn_max_lifetime": 180,
       "conn_max_open": 10,
-      "dsn": "dbro_user:dbro_pass@tcp(nuragoexample_mysql:3306)/nuragoexample",
+      "dsn": "dbro_user:dbro_pass@tcp(nuragoexample_mysql:3306)/nuragoexample?parseTime=true",
       "timeout_ping": 2
     }
   },

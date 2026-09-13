@@ -32,3 +32,102 @@ testcases:
       assertions:
         - result.statuscode ShouldEqual 200
         - result.body ShouldNotBeEmpty
+
+# The item testcases below are ordered and share state: create_item captures the
+# identifier the later testcases use. They exercise the item endpoints against
+# the MySQL instance migrated by Flyway, which is seeded with three rows.
+
+- name: create_item
+  steps:
+    - type: http
+      ignore_verify_ssl optional: true
+      method: POST
+      url: '{{.nuragoexample.url}}/items'
+      headers:
+        Content-Type: application/json
+      body: '{"name":"venom-widget","quantity":5}'
+      vars:
+        id:
+          from: result.bodyjson.id
+      assertions:
+        - result.statuscode ShouldEqual 201
+        - result.headers.Location ShouldStartWith /items/
+        - result.bodyjson.id ShouldNotBeEmpty
+        - result.bodyjson.name ShouldEqual "venom-widget"
+        - result.bodyjson.quantity ShouldEqual 5
+        - result.bodyjson.created_at ShouldNotBeEmpty
+
+- name: create_duplicate_item
+  steps:
+    - type: http
+      ignore_verify_ssl optional: true
+      method: POST
+      url: '{{.nuragoexample.url}}/items'
+      headers:
+        Content-Type: application/json
+      body: '{"name":"venom-widget","quantity":9}'
+      assertions:
+        - result.statuscode ShouldEqual 409
+
+- name: get_item
+  steps:
+    - type: http
+      ignore_verify_ssl optional: true
+      method: GET
+      url: '{{.nuragoexample.url}}/items/{{.create_item.id}}'
+      assertions:
+        - result.statuscode ShouldEqual 200
+        - result.bodyjson.id ShouldEqual "{{.create_item.id}}"
+        - result.bodyjson.name ShouldEqual "venom-widget"
+        - result.bodyjson.quantity ShouldEqual 5
+
+- name: list_items
+  steps:
+    - type: http
+      ignore_verify_ssl optional: true
+      method: GET
+      url: '{{.nuragoexample.url}}/items'
+      assertions:
+        - result.statuscode ShouldEqual 200
+        - result.bodyjson ShouldHaveLength 4
+        - result.bodyjson.bodyjson0.name ShouldEqual "venom-widget"
+        - result.body ShouldContainSubstring '"name":"seed-bolt"'
+        - result.body ShouldContainSubstring '"name":"seed-nut"'
+        - result.body ShouldContainSubstring '"name":"seed-washer"'
+
+- name: list_items_with_limit
+  steps:
+    - type: http
+      ignore_verify_ssl optional: true
+      method: GET
+      url: '{{.nuragoexample.url}}/items?limit=2'
+      assertions:
+        - result.statuscode ShouldEqual 200
+        - result.bodyjson ShouldHaveLength 2
+
+- name: delete_item
+  steps:
+    - type: http
+      ignore_verify_ssl optional: true
+      method: DELETE
+      url: '{{.nuragoexample.url}}/items/{{.create_item.id}}'
+      assertions:
+        - result.statuscode ShouldEqual 204
+
+- name: get_deleted_item
+  steps:
+    - type: http
+      ignore_verify_ssl optional: true
+      method: GET
+      url: '{{.nuragoexample.url}}/items/{{.create_item.id}}'
+      assertions:
+        - result.statuscode ShouldEqual 404
+
+- name: delete_missing_item
+  steps:
+    - type: http
+      ignore_verify_ssl optional: true
+      method: DELETE
+      url: '{{.nuragoexample.url}}/items/{{.create_item.id}}'
+      assertions:
+        - result.statuscode ShouldEqual 404

@@ -47,20 +47,16 @@ func main() {
 	)
 	l := logsrv.NewLogger(logcfg)
 
+	// build the root command and execute it, logging errors (if any)
 	rootCmd, err := cli.New(programVersion, programRelease, bootstrap.Bootstrap)
 	if err != nil {
 		l.With(slog.Any("error", err)).Error("UNABLE TO START THE PROGRAM")
 		exitFn(1)
-
-		// exitFn normally terminates the process; guard against test doubles
-		// that return, so a nil rootCmd is never executed.
-		return
-	}
-
-	// execute the root command and log errors (if any)
-	err = rootCmd.Execute()
-	if err != nil {
-		l.With(slog.Any("error", err)).Error("UNABLE TO RUN THE COMMAND")
-		exitFn(2)
+	} else {
+		err = rootCmd.Execute()
+		if err != nil {
+			l.With(slog.Any("error", err)).Error("UNABLE TO RUN THE COMMAND")
+			exitFn(2)
+		}
 	}
 }

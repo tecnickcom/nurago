@@ -17,6 +17,8 @@ tags:
     description: Ping this service
   - name: uid
     description: generate a random UID
+  - name: items
+    description: manage items
 paths:
   /ping:
     get:
@@ -44,3 +46,181 @@ paths:
               schema:
                 type: string
                 description: UID
+  /items:
+    post:
+      tags:
+        - items
+      summary: Creates an item
+      description: >-
+        Available only when the service is configured with a database;
+        otherwise the route is not registered and the request returns 404.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewItem'
+      responses:
+        '201':
+          description: The item was created
+          headers:
+            Location:
+              description: Path of the created item
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '400':
+          description: The request body is not valid JSON
+          content:
+            text/plain:
+              schema:
+                type: string
+        '409':
+          description: An item with the same name already exists
+          content:
+            text/plain:
+              schema:
+                type: string
+        '422':
+          description: The item name is empty or too long
+          content:
+            text/plain:
+              schema:
+                type: string
+    get:
+      tags:
+        - items
+      summary: Lists a page of items
+      description: >-
+        Available only when the service is configured with a database;
+        otherwise the route is not registered and the request returns 404.
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: >-
+            Maximum number of items to return. Zero or absent selects the
+            default page size.
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: One page of items, most recently created first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Item'
+        '422':
+          description: The limit is not a non-negative integer, or is above the maximum
+          content:
+            text/plain:
+              schema:
+                type: string
+  /items/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Item identifier
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - items
+      summary: Returns a single item
+      description: >-
+        Available only when the service is configured with a database;
+        otherwise the route is not registered and the request returns 404.
+      responses:
+        '200':
+          description: The requested item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '404':
+          description: The item does not exist
+          content:
+            text/plain:
+              schema:
+                type: string
+        '422':
+          description: The identifier is empty
+          content:
+            text/plain:
+              schema:
+                type: string
+    delete:
+      tags:
+        - items
+      summary: Deletes a single item
+      description: >-
+        Available only when the service is configured with a database;
+        otherwise the route is not registered and the request returns 404.
+      responses:
+        '204':
+          description: The item was deleted
+        '404':
+          description: The item does not exist
+          content:
+            text/plain:
+              schema:
+                type: string
+        '422':
+          description: The identifier is empty
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    NewItem:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Unique item name
+          minLength: 1
+          maxLength: 128
+        quantity:
+          type: integer
+          description: Item quantity, bounded by the INT UNSIGNED column
+          minimum: 0
+          maximum: 4294967295
+          default: 0
+    Item:
+      type: object
+      required:
+        - id
+        - name
+        - quantity
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: UUIDv7 assigned by the service
+        name:
+          type: string
+          description: Unique item name
+        quantity:
+          type: integer
+          description: Item quantity
+          minimum: 0
+          maximum: 4294967295
+        created_at:
+          type: string
+          format: date-time
+          description: Creation time

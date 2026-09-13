@@ -60,12 +60,12 @@ This folder centralizes those concerns so developers and CI/CD pipelines use the
 
 #### db/mysql/schema/V0000__schema.sql
 
-- Problem solved: creates the base MySQL schema objects (users table).
+- Problem solved: creates the base MySQL schema objects (item table).
 - Why it matters: establishes a versioned baseline migration.
 
 #### db/mysql/int/V1001__example_table.sql
 
-- Problem solved: seeds example MySQL data for integration-style scenarios.
+- Problem solved: seeds example MySQL items for integration-style scenarios.
 - Why it matters: tests have predictable records to query.
 
 #### db/mysql/users.sql

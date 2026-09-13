@@ -712,10 +712,16 @@ rpm:
 ## Test the OpenAPI specification against the real deployed service
 .PHONY: schemathesistest
 schemathesistest:
+# The checks to run are set in schemathesis.toml, not here: a --checks flag
+# replaces that file's settings, including its per-operation overrides.
+#
+# --max-time bounds the run: the stateful phase explores API links for as long
+# as it keeps finding new behavior, which on a spec with several linked
+# operations takes an unpredictable amount of time.
 	schemathesis run \
-	--checks=all \
 	--request-timeout=2000 \
 	--max-examples=100 \
+	--max-time=10 \
 	--url='${API_TEST_URL}' \
 	${OPENAPI_FILE}
 

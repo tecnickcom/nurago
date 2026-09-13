@@ -14,6 +14,10 @@ type SQLConn interface {
 }
 
 // Databases holds the database connections.
+//
+// Enabled reports whether the connections were established. It gates the
+// features that need a database: the item endpoints are registered only when it
+// is true (see internal/cli/bind.go).
 type Databases struct {
 	Enabled bool
 	Main    SQLConn
