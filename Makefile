@@ -75,7 +75,7 @@ GOFMT=$(shell which gofmt)
 GOTEST=$(GO) test
 GODOC=GOPATH="$(GOPATH)" $(shell which godoc)
 GOLANGCILINT=$(BINUTIL)/golangci-lint
-GOLANGCILINTVERSION=v2.13.2
+GOLANGCILINTVERSION=v2.14.0
 GOVULNCHECK=$(BINUTIL)/govulncheck
 BENCHSTAT=$(BINUTIL)/benchstat
 GOJUNITREPORT=$(BINUTIL)/go-junit-report
