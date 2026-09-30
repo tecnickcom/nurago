@@ -19,7 +19,7 @@ require (
 	github.com/jstemmer/go-junit-report/v2 v2.1.0 // indirect
 	go.uber.org/mock v0.6.0 // indirect
 	golang.org/x/mod v0.41.0 // indirect
-	golang.org/x/perf v0.0.0-20260908200009-22c9c6c9d4da // indirect
+	golang.org/x/perf v0.0.0-20260929162123-406019bb8b68 // indirect
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/telemetry v0.0.0-20260924152758-ed294f943157 // indirect
