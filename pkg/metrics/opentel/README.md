@@ -106,7 +106,7 @@ More runnable examples are on [pkg.go.dev](https://pkg.go.dev/github.com/tecnick
 
 ## Dependencies
 
-Importing this package pulls 28 external modules:
+Importing this package pulls 29 external modules:
 
 - `github.com/XSAM/otelsql`
 - `github.com/cenkalti/backoff/v5`
@@ -124,6 +124,7 @@ Importing this package pulls 28 external modules:
 - `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`
 - `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`
 - `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`
+- `go.opentelemetry.io/otel/log`
 - `go.opentelemetry.io/otel/metric`
 - `go.opentelemetry.io/otel/sdk`
 - `go.opentelemetry.io/otel/sdk/metric`
