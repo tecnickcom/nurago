@@ -31,8 +31,8 @@ require (
 	github.com/tecnickcom/farmhash64 v1.10.8
 	github.com/tecnickcom/statsd v1.1.11
 	github.com/undefinedlabs/go-mpatch v1.0.7
-	github.com/valkey-io/valkey-go v1.0.78
-	github.com/valkey-io/valkey-go/mock v1.0.78
+	github.com/valkey-io/valkey-go v1.0.79
+	github.com/valkey-io/valkey-go/mock v1.0.79
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.72.0
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.47.0
