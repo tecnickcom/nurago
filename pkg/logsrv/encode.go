@@ -155,6 +155,8 @@ func addValueEvent(e *zerolog.Event, key string, v slog.Value) bool {
 // addGroupEvent writes a group's attributes onto e and reports whether it produced any field:
 // inlined at the current level when the key is empty, otherwise nested under a sub-dictionary
 // keyed by name. An empty group emits nothing (no bare "{}").
+//
+//nolint:gocognit
 func addGroupEvent(e *zerolog.Event, key string, attrs []slog.Attr) bool {
 	if key == "" {
 		wrote := false

@@ -194,6 +194,8 @@ func recordMayNeedSanitize(record slog.Record) bool {
 // sanitizeAttrs returns attrs resolved and with every non-rendering group removed, at any depth, and
 // reports whether that differs from the input. The input slice is returned as it came when there is
 // nothing to change, so the common case allocates nothing.
+//
+//nolint:gocognit
 func sanitizeAttrs(attrs []Attr) ([]Attr, bool) {
 	var out []Attr // nil until the first attribute that needs changing (copy-on-write)
 

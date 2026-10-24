@@ -185,6 +185,8 @@ func (h *zerologHandler) writeRoot(e *zerolog.Event, record *slog.Record) {
 // frame's attributes and, at the innermost frame, the record's attributes. It reports whether
 // the chain produced any field, so the caller can omit an all-empty (sub)group rather than
 // render it as a bare "{}" object. This is a single pass: attribute values are resolved once.
+//
+//nolint:gocognit
 func (h *zerologHandler) buildGroupDict(frames []groupFrame, record *slog.Record) (*zerolog.Event, bool) {
 	d := zerolog.Dict()
 	wrote := false

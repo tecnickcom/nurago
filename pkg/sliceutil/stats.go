@@ -133,6 +133,8 @@ func Stats[S ~[]V, V typeutil.Number](s S) (*DescStats[V], error) {
 }
 
 // statsCenter computes min, max, mode/frequency, range, mean, and median.
+//
+//nolint:gocognit
 func statsCenter[S ~[]V, V typeutil.Number](ds *DescStats[V], s, ord S, n int, nf float64) {
 	freq := 1
 
