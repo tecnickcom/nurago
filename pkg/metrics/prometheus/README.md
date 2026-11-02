@@ -86,12 +86,13 @@ More runnable examples are on [pkg.go.dev](https://pkg.go.dev/github.com/tecnick
 
 ## Dependencies
 
-Importing this package pulls 10 external modules:
+Importing this package pulls 11 external modules:
 
 - `github.com/beorn7/perks`
 - `github.com/cespare/xxhash/v2`
 - `github.com/dlmiddlecote/sqlstats`
 - `github.com/munnerz/goautoneg`
+- `github.com/pandatix/go-abnf`
 - `github.com/prometheus/client_golang`
 - `github.com/prometheus/client_model`
 - `github.com/prometheus/common`
