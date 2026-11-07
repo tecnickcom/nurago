@@ -776,7 +776,7 @@ schemathesistest:
 # as it keeps finding new behavior, which on a spec with several linked
 # operations takes an unpredictable amount of time.
 	schemathesis run \
-	--request-timeout=2000 \
+	--request-timeout=30 \
 	--max-examples=100 \
 	--max-time=10 \
 	--url='${API_TEST_URL}' \
