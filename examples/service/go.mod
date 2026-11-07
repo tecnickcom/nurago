@@ -15,7 +15,7 @@ require (
 	github.com/spf13/pflag v1.1.0
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.12.1
-	github.com/tecnickcom/nurago v1.156.7
+	github.com/tecnickcom/nurago v1.157.0
 )
 
 require (

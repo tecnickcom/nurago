@@ -3,7 +3,7 @@
   "url": "https://context7.com/tecnickcom/nurago",
   "public_key": "pk_AINs7SRNYi4YSEfbyLFuQ",
   "projectTitle": "nurago",
-  "description": "70 independent Go packages for backend services (formerly gogen): HTTP client and server, retries, OpenTelemetry, logging, JWT, password hashing, Redis, Valkey, Kafka, AWS, SQL, caching, config.",
+  "description": "72 independent Go packages for backend services (formerly gogen): HTTP client and server, retries, OpenTelemetry, logging, JWT, password hashing, Redis, Valkey, Kafka, AWS, SQL, caching, config.",
   "branch": "main",
   "excludeFolders": [
     ".github",
@@ -17,7 +17,7 @@
   ],
   "rules": [
     "The module path is github.com/tecnickcom/nurago. The former github.com/tecnickcom/gogen path is deprecated and must not be used in new imports.",
-    "Import individual packages under pkg/, not the module root. Each package pulls only the dependencies it reaches, and 40 of the 70 reach no external module at all.",
+    "Import individual packages under pkg/, not the module root. Each package pulls only the dependencies it reaches, and 40 of the 72 reach no external module at all.",
     "Packages that take configuration use variadic functional options: a New constructor with an opts ...Option parameter and WithXxx option functions.",
     "The module is at v1 and every exported symbol under pkg/ is stable within v1. A high patch number reflects frequent additive releases, not API churn.",
     "Guides and per-package pages are published at https://nurago.org, with a machine-readable index at https://nurago.org/llms.txt."
