@@ -10,6 +10,7 @@ import (
 	"net"
 	"slices"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -152,6 +153,50 @@ func TestNew_lifecycleError(t *testing.T) {
 			require.Nil(t, s)
 		})
 	}
+}
+
+// failAfterFirstCall returns a function that calls first on its first
+// invocation and then on every later one.
+func failAfterFirstCall[T any](first, then func(T) error) func(T) error {
+	var called atomic.Bool
+
+	return func(c T) error {
+		if called.Swap(true) {
+			return then(c)
+		}
+
+		return first(c)
+	}
+}
+
+func TestNew_lifecycleNewError(t *testing.T) {
+	t.Parallel()
+
+	// The option passes the validation in newConfig and fails in srvlifecycle.New.
+	opt := func(cfg *config) error {
+		cfg.lifecycleOpts = append(cfg.lifecycleOpts, failAfterFirstCall(
+			srvlifecycle.WithShutdownTimeout(time.Second),
+			srvlifecycle.WithShutdownTimeout(0),
+		))
+
+		return nil
+	}
+
+	var lc net.ListenConfig
+
+	l, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	addr := l.Addr().String()
+	require.NoError(t, l.Close())
+
+	s, err := New(t.Context(), unexpectedBinder{t: t}, WithServerAddr(addr), WithLogger(discardLogger()), opt)
+	require.ErrorContains(t, err, "failed creating the grpc server lifecycle")
+	require.Nil(t, s)
+
+	l, err = lc.Listen(t.Context(), "tcp", addr)
+	require.NoError(t, err, "the listener must be released")
+	require.NoError(t, l.Close())
 }
 
 func TestNew_listenError(t *testing.T) {
