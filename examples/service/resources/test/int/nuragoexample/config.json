@@ -32,6 +32,14 @@
     "network": ""
   },
   "servers": {
+    "grpc": {
+      "address": ":8074",
+      "enabled": true,
+      "reflection": false,
+      "timeout": 60,
+      "tls_cert_file": "",
+      "tls_key_file": ""
+    },
     "monitoring": {
       "address": ":8071",
       "timeout": 60

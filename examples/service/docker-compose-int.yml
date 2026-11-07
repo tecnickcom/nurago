@@ -10,6 +10,7 @@ services:
       - nuragoexample
     volumes:
       - ./target/binutil/dockerize:/usr/bin/dockerize
+      - ./target/binutil/grpcinttest:/usr/bin/grpcinttest
       - ./target/report/:/workspace/target/report/
 
   nuragoexample:

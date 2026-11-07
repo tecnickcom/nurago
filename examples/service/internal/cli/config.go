@@ -40,11 +40,25 @@ type cfgServerPrivate cfgServer
 
 type cfgServerPublic cfgServer
 
+// cfgServerGRPC contains the configuration of the gRPC server.
+// TLS is enabled when both the certificate and the key files are set.
+type cfgServerGRPC struct {
+	Enabled     bool   `mapstructure:"enabled"`
+	Address     string `mapstructure:"address"       validate:"required,hostname_port"`
+	Timeout     int    `mapstructure:"timeout"       validate:"required,min=1"`
+	Reflection  bool   `mapstructure:"reflection"`
+	TLSCertFile string `mapstructure:"tls_cert_file" validate:"required_with=TLSKeyFile,omitempty,file"`
+	TLSKeyFile  string `mapstructure:"tls_key_file"  validate:"required_with=TLSCertFile,omitempty,file"`
+}
+
 // cfgServers contains the configuration for all exposed servers.
 type cfgServers struct {
 	Monitoring cfgServerMonitoring `mapstructure:"monitoring" validate:"required"`
 	Private    cfgServerPrivate    `mapstructure:"private"    validate:"required"`
 	Public     cfgServerPublic     `mapstructure:"public"     validate:"required"`
+	// GRPC is validated conditionally in Validate (only when
+	// servers.grpc.enabled is true), so the "-" tag skips the default dive here.
+	GRPC cfgServerGRPC `mapstructure:"grpc" validate:"-"`
 }
 
 type cfgClientIpify struct {
@@ -102,6 +116,13 @@ func (c *appConfig) SetDefaults(v config.Viper) {
 	v.SetDefault("servers.public.address", ":8073")
 	v.SetDefault("servers.public.timeout", 60)
 
+	v.SetDefault("servers.grpc.enabled", false)
+	v.SetDefault("servers.grpc.address", ":8074")
+	v.SetDefault("servers.grpc.timeout", 60)
+	v.SetDefault("servers.grpc.reflection", false)
+	v.SetDefault("servers.grpc.tls_cert_file", "")
+	v.SetDefault("servers.grpc.tls_key_file", "")
+
 	v.SetDefault("clients.ipify.address", "https://api.ipify.org")
 	v.SetDefault("clients.ipify.timeout", 1)
 
@@ -144,6 +165,14 @@ func (c *appConfig) Validate() error {
 	err = v.ValidateStruct(c)
 	if err != nil {
 		return err //nolint:wrapcheck
+	}
+
+	// The gRPC server configuration is validated only when enabled.
+	if c.Servers.GRPC.Enabled {
+		err = v.ValidateStruct(&c.Servers.GRPC)
+		if err != nil {
+			return err //nolint:wrapcheck
+		}
 	}
 
 	// The database configuration is validated only when enabled, so a service

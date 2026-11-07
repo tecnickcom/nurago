@@ -168,6 +168,21 @@ GOVULNCHECK=$(BINUTIL)/govulncheck
 GOJUNITREPORT=$(BINUTIL)/go-junit-report
 DOCKERIZEVERSION=v0.9.2
 
+# Protobuf toolchain, installed by the deps target.
+# protoc-gen-go matches the google.golang.org/protobuf version in go.mod.
+BUF=$(BINUTIL)/buf
+BUFVERSION=v1.75.0
+PROTOCGENGOVERSION=v1.36.12
+PROTOCGENGOGRPCVERSION=v1.6.2
+
+# Branch used as the baseline by the protobreaking target
+PROTOBREAKINGBRANCH=main
+
+# Path of this project relative to the git repository root, with no trailing slash
+GITPREFIX=$(patsubst %/,%,$(shell git rev-parse --show-prefix 2>/dev/null))
+
+comma:=,
+
 # Current operating system and architecture as one string.
 GOOSARCH=$(shell go env GOOS GOARCH | tr -d \\n)
 
@@ -193,8 +208,8 @@ GOBUILDENV=
 CMDDIR=./cmd
 SRCDIR=./internal
 
-# List of packages
-GOPKGS=$(shell $(GO) list $(CMDDIR)/... $(SRCDIR)/...)
+# List of packages, excluding the generated protobuf code
+GOPKGS=$(shell $(GO) list $(CMDDIR)/... $(SRCDIR)/... | grep -v '/internal/gen/')
 
 # Enable junit report when not in LOCAL mode
 ifeq ($(strip $(DEVMODE)),LOCAL)
@@ -252,6 +267,7 @@ ifeq ($(DEPLOY_ENV), int)
 	NURAGOEXAMPLE_MONITORING_URL=http://nuragoexample:8071
 	NURAGOEXAMPLE_PRIVATE_URL=http://nuragoexample:8072
 	NURAGOEXAMPLE_PUBLIC_URL=http://nuragoexample:8073
+	NURAGOEXAMPLE_GRPC_ADDR=nuragoexample:8074
 	API_TEST_FILE=*.yaml
 endif
 
@@ -265,6 +281,7 @@ ifeq ($(DEPLOY_ENV), local)
 	NURAGOEXAMPLE_MONITORING_URL=http://nuragoexample:8071
 	NURAGOEXAMPLE_PRIVATE_URL=http://nuragoexample:8072
 	NURAGOEXAMPLE_PUBLIC_URL=http://nuragoexample:8073
+	NURAGOEXAMPLE_GRPC_ADDR=nuragoexample:8074
 	API_TEST_FILE=*.yaml
 endif
 
@@ -278,6 +295,7 @@ ifeq ($(DEPLOY_ENV), dev)
 	NURAGOEXAMPLE_MONITORING_URL=http://nuragoexample:8071
 	NURAGOEXAMPLE_PRIVATE_URL=http://nuragoexample:8072
 	NURAGOEXAMPLE_PUBLIC_URL=http://nuragoexample:8073
+	NURAGOEXAMPLE_GRPC_ADDR=nuragoexample:8074
 	API_TEST_FILE=*.yaml
 endif
 
@@ -291,6 +309,7 @@ ifeq ($(DEPLOY_ENV), qa)
 	NURAGOEXAMPLE_MONITORING_URL=http://nuragoexample:8071
 	NURAGOEXAMPLE_PRIVATE_URL=http://nuragoexample:8072
 	NURAGOEXAMPLE_PUBLIC_URL=http://nuragoexample:8073
+	NURAGOEXAMPLE_GRPC_ADDR=nuragoexample:8074
 endif
 
 # Production environment
@@ -303,6 +322,7 @@ ifeq ($(DEPLOY_ENV), prod)
 	NURAGOEXAMPLE_MONITORING_URL=http://nuragoexample:8071
 	NURAGOEXAMPLE_PRIVATE_URL=http://nuragoexample:8072
 	NURAGOEXAMPLE_PUBLIC_URL=http://nuragoexample:8073
+	NURAGOEXAMPLE_GRPC_ADDR=nuragoexample:8074
 	API_TEST_FILE=*.yaml
 endif
 
@@ -336,7 +356,7 @@ all: help
 ## Test and build everything from scratch
 .PHONY: x
 x:
-	DEVMODE=LOCAL $(MAKE) format clean mod deps gendoc generate qa build docker dockertest
+	DEVMODE=LOCAL $(MAKE) format clean mod deps gendoc protogen generate qa build docker dockertest
 
 ## Execute API tests
 .PHONY: apitest
@@ -422,6 +442,9 @@ endif
 .PHONY: deps
 deps: ensuretarget
 	curl --silent --show-error --fail --location "https://golangci-lint.run/install.sh" | sh -s -- -b "$(BINUTIL)" $(GOLANGCILINTVERSION)
+	GOBIN="$(CURDIR)/$(BINUTIL)" $(GO) install github.com/bufbuild/buf/cmd/buf@$(BUFVERSION)
+	GOBIN="$(CURDIR)/$(BINUTIL)" $(GO) install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOCGENGOVERSION)
+	GOBIN="$(CURDIR)/$(BINUTIL)" $(GO) install google.golang.org/grpc/cmd/protoc-gen-go-grpc@$(PROTOCGENGOGRPCVERSION)
 
 ## Build a scratch docker container to run this service
 .PHONY: docker
@@ -529,6 +552,7 @@ dcenvup: dockerenvcfg dockerdev
 	$(DOCKERCOMPOSECMD) -f "./docker-compose-$(DEPLOY_ENV).yml" down --volumes || true
 	$(DOCKERCOMPOSECMD) -f "./docker-compose-$(DEPLOY_ENV).yml" build $(DOCKERBUILDARG)
 ifeq ($(DEPLOY_ENV),int)
+	$(MAKE) grpcinttestbuild
 	$(DOCKERCOMPOSECMD) -f "./docker-compose-$(DEPLOY_ENV).yml" run ${PROJECT}_integration || echo $${?} > "$(TARGETDIR)/make.exit"
 else
 	$(DOCKERCOMPOSECMD) -f "./docker-compose-$(DEPLOY_ENV).yml" up
@@ -580,6 +604,20 @@ gendoc:
 	--template deployment=./doc/src/deployment.tmpl \
 	--file ./doc/src/README.tmpl \
 	--out README.md
+
+## Execute the gRPC API integration tests
+.PHONY: grpcapitest
+grpcapitest:
+	@mkdir -p "$(TARGETDIR)/report/${DEPLOY_ENV}/grpc"
+	NURAGOEXAMPLE_GRPC_ADDR="${NURAGOEXAMPLE_GRPC_ADDR}" \
+	NURAGOEXAMPLE_PUBLIC_URL="${NURAGOEXAMPLE_PUBLIC_URL}" \
+	grpcinttest -test.v -test.count=1 -test.run='^TestIntegration' \
+	| tee "$(TARGETDIR)/report/${DEPLOY_ENV}/grpc/grpcapitest.txt"
+
+## Build the gRPC API integration test binary for the integration container
+.PHONY: grpcinttestbuild
+grpcinttestbuild: ensuretarget
+	CGO_ENABLED=0 $(LINUXGOBUILDENV) $(GO) test -c -tags=integration -o "$(BINUTIL)/grpcinttest" "$(SRCDIR)/grpchandler"
 
 ## Install this application
 .PHONY: install
@@ -667,6 +705,25 @@ modcheck:
 	$(GO) mod tidy -diff -compat=$(shell sed -n -E 's/^go ([0-9]+\.[0-9]+).*/\1/p' go.mod)
 	$(GOTOOLSMOD) mod tidy -diff
 
+## Check the protobuf API for breaking changes against the PROTOBREAKINGBRANCH branch
+.PHONY: protobreaking
+protobreaking:
+	@if git cat-file -e "$(PROTOBREAKINGBRANCH):$(if $(GITPREFIX),$(GITPREFIX)/)proto" 2>/dev/null; then \
+		$(BUF) breaking --against "$$(git rev-parse --absolute-git-dir)#branch=$(PROTOBREAKINGBRANCH)$(if $(GITPREFIX),$(comma)subdir=$(GITPREFIX))"; \
+	else \
+		echo "No proto directory on branch $(PROTOBREAKINGBRANCH): skipping the breaking change check."; \
+	fi
+
+## Generate the Go code from the protobuf API definition (internal/gen)
+.PHONY: protogen
+protogen:
+	$(BUF) generate
+
+## Check the protobuf API definition against the buf lint rules
+.PHONY: protolint
+protolint:
+	$(BUF) lint
+
 ## Test the OpenAPI specification
 .PHONY: openapitest
 openapitest:
@@ -681,7 +738,7 @@ ping:
 
 ## Run all tests and static analysis tools
 .PHONY: qa
-qa: linter govulncheck confcheck test coverage
+qa: protolint linter govulncheck confcheck test coverage
 
 ## Retry the ping command automatically
 .PHONY: rping
@@ -766,7 +823,7 @@ uninstall:
 
 ## Update everything
 .PHONY: updateall
-updateall: updatego updatelint updatemod
+updateall: updatego updatelint updatebuf updatemod
 
 ## Update Go version
 .PHONY: updatego
@@ -775,6 +832,16 @@ updatego:
 # The `go` directive is the minimum version a consumer needs and is set
 # deliberately: it is not bumped here. Only the toolchain is updated.
 	sed $(SEDINPLACE) "s|^toolchain go[0-9]*\.[0-9]*\.[0-9]*$$|toolchain ${LAST_GO_TOOLCHAIN}|g" go.mod "$(GOTOOLSDIR)/go.mod"
+
+## Update the protobuf toolchain versions
+.PHONY: updatebuf
+updatebuf:
+	$(eval LAST_BUF_VERSION=$(shell $(GO) list -m -f '{{.Version}}' github.com/bufbuild/buf@latest))
+	$(eval LAST_PROTOCGENGOGRPC_VERSION=$(shell $(GO) list -m -f '{{.Version}}' google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest))
+	$(eval PROTOBUF_VERSION=$(shell $(GO) list -m -f '{{.Version}}' google.golang.org/protobuf))
+	sed $(SEDINPLACE) "s|^BUFVERSION=v[0-9]*\.[0-9]*\.[0-9]*$$|BUFVERSION=${LAST_BUF_VERSION}|g" Makefile
+	sed $(SEDINPLACE) "s|^PROTOCGENGOGRPCVERSION=v[0-9]*\.[0-9]*\.[0-9]*$$|PROTOCGENGOGRPCVERSION=${LAST_PROTOCGENGOGRPC_VERSION}|g" Makefile
+	sed $(SEDINPLACE) "s|^PROTOCGENGOVERSION=v[0-9]*\.[0-9]*\.[0-9]*$$|PROTOCGENGOVERSION=${PROTOBUF_VERSION}|g" Makefile
 
 ## Update golangci-lint version
 .PHONY: updatelint

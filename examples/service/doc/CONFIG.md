@@ -84,6 +84,13 @@ The configuration format is a single JSON structure with the following fields:
   * **public**: *Public HTTP server*
     * **address**: HTTP address (ip:port) or just (:port)
     * **timeout**: HTTP request timeout [seconds]
+  * **grpc**: *gRPC server (optional)*
+    * **enabled**: Enable or disable the gRPC server (default: false)
+    * **address**: gRPC address (ip:port) or just (:port)
+    * **timeout**: Deadline applied to unary RPCs that arrive without one [seconds]
+    * **reflection**: Enable the gRPC server reflection service. Enable it only on listeners that are not reachable from untrusted networks
+    * **tls_cert_file**: (OPTIONAL) Path of the PEM-encoded TLS certificate file. TLS is enabled when both tls_cert_file and tls_key_file are set
+    * **tls_key_file**: (OPTIONAL) Path of the PEM-encoded TLS private key file
 
 * **clients**: Configuration for external service clients
   * **ipify**:  ipify service client

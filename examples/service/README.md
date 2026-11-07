@@ -68,6 +68,7 @@ nuragoexamplelongdesc
 * [Metrics](#metrics)
 * [Profiling](#profiling)
 * [OpenAPI](#openapi)
+* [gRPC API](#grpc)
 * [Docker](#docker)
 
 <a name="style"></a>
@@ -109,8 +110,10 @@ That structure matters because it lets you extend the example without mixing app
 
 ## Top Features
 
-* **Three-server runtime layout** via monitoring, private, and public HTTP endpoints.
+* **Three-server runtime layout** via monitoring, private, and public HTTP endpoints, plus an optional gRPC server.
 	Why it matters: it shows how to isolate operational traffic from internal and external APIs from day one.
+* **One business service, two transports** in `internal/httphandlerpub` and `internal/grpchandler`.
+	Why it matters: REST and gRPC clients get the same behavior and error mapping from a single implementation.
 * **Configuration-first bootstrap** in `internal/cli`.
 	Why it matters: startup, logging, metrics, health checks, and graceful shutdown are all wired in one place, which keeps new features easier to add safely.
 * **Operational assets shipped with the codebase** in `resources`.
@@ -124,6 +127,7 @@ That structure matters because it lets you extend the example without mixing app
 | --- | --- |
 | `cmd` | Application entry point. Holds `main.go`, the executable startup flow, and package-level service documentation. |
 | `doc` | Project documentation sources and generated documentation assets. |
+| `proto` | Protobuf definition of the gRPC API. |
 | `internal` | Private application packages that wire configuration, handlers, metrics, and optional dependencies. |
 | `resources` | Runtime, packaging, database, dashboard, and test fixture assets used by developers, CI, and deployment workflows. |
 | `target` | Generated build outputs, reports, temporary test artifacts, and packaged files. |
@@ -133,6 +137,8 @@ That structure matters because it lets you extend the example without mixing app
 | Path | Function |
 | --- | --- |
 | `go.mod` | Defines the module and the service-specific dependency graph. |
+| `buf.yaml` | Buf module, lint, and breaking change configuration for `proto`. |
+| `buf.gen.yaml` | Buf code generation configuration for `internal/gen`. |
 | `Makefile` | Main developer workflow entry point for build, test, documentation, and packaging commands. |
 | `docker-compose-local.yml` | Local development stack definition. |
 | `docker-compose-int.yml` | Integration-test stack definition. |
@@ -173,6 +179,8 @@ This folder contains the application-specific implementation details that should
 | --- | --- |
 | `internal/cli` | Loads configuration, defines CLI flags, builds the dependency graph, and starts the service lifecycle. |
 | `internal/db` | Shared database abstractions used by the service wiring. |
+| `internal/gen` | Go code generated from `proto` by `make protogen`. Do not edit. |
+| `internal/grpchandler` | gRPC item API implementation, plus its integration tests (build tag `integration`). |
 | `internal/httphandlerpriv` | Private API route definitions and handlers. |
 | `internal/httphandlerpub` | Public API route definitions and handlers. |
 | `internal/item` | Example business domain: domain types, service rules, and the SQL repository behind the item endpoints. |
@@ -299,7 +307,7 @@ The log level can be set either in the configuration or as command argument (`lo
 
 ## Metrics
 
-This service provides [Prometheus](https://prometheus.io/) metrics at the `/metrics` endpoint.
+This service provides [Prometheus](https://prometheus.io/) metrics at the `/metrics` endpoint, including the gRPC server metrics.
 
 <a name="profiling"></a>
 
@@ -333,6 +341,72 @@ docker run -p 8056:8080 swaggerapi/swagger-editor
 ```
 
 and pointing the Web browser to http://localhost:8056
+
+<a name="grpc"></a>
+
+## gRPC API
+
+The item API is also served over [gRPC](https://grpc.io) by a separate server, on port 8074 by default, enabled with `servers.grpc.enabled` (see [CONFIG.md](CONFIG.md)).
+The `item.v1.ItemService` service is defined in `proto/item/v1/item.proto` and covers every public REST item route:
+
+| RPC | REST route |
+| --- | --- |
+| `CreateItem` | `POST /items` |
+| `ListItems` | `GET /items` |
+| `GetItem` | `GET /items/:id` |
+| `DeleteItem` | `DELETE /items/:id` |
+
+Both transports call the same `item.Service`, so the item errors map to the same outcome:
+
+| `item` error | REST | gRPC |
+| --- | --- | --- |
+| `ErrNotFound` | 404 | `NOT_FOUND` |
+| `ErrConflict` | 409 | `ALREADY_EXISTS` |
+| `ErrValidation` | 422 | `INVALID_ARGUMENT` |
+| other | 500 (logged) | `INTERNAL` (logged, generic message) |
+
+The gRPC server also serves the standard `grpc.health.v1.Health` service, backed by the same health checks as the monitoring `/status` route.
+Its Prometheus metrics (`grpc_server_*`) are exported at the monitoring `/metrics` endpoint.
+
+### Calling the gRPC API
+
+The local docker-compose environment (`make localenvstart`) enables server reflection, so the API can be explored with [grpcurl](https://github.com/fullstorydev/grpcurl):
+
+```bash
+grpcurl -plaintext localhost:8074 list
+grpcurl -plaintext -d '{"name":"widget","quantity":3}' localhost:8074 item.v1.ItemService/CreateItem
+grpcurl -plaintext -d '{"limit":10}' localhost:8074 item.v1.ItemService/ListItems
+grpcurl -plaintext localhost:8074 grpc.health.v1.Health/Check
+```
+
+Reflection lets any client list the services: enable it (`servers.grpc.reflection`) only on listeners that are not reachable from untrusted networks.
+Without reflection, pass the proto file to grpcurl with `-import-path proto -proto item/v1/item.proto`.
+
+### Code generation
+
+The Go code in `internal/gen` is generated from `proto/` with [buf](https://buf.build) and the `protoc-gen-go` and `protoc-gen-go-grpc` plugins, and is committed, so `go build` does not need the protobuf toolchain.
+The tool versions are pinned in the `Makefile` and installed in `target/binutil` by `make deps`.
+
+| Command | Function |
+| --- | --- |
+| `make protogen` | Regenerates `internal/gen` from `proto/`. |
+| `make protolint` | Checks the API definition against the buf `STANDARD` lint rules (part of `make qa`). |
+| `make protobreaking` | Checks the API definition for breaking changes against the `main` branch. |
+| `make updatebuf` | Updates the pinned tool versions. |
+
+The proto files have no `go_package` option: the Go import path is set in `buf.gen.yaml`, so the generated code contains no project-specific names.
+
+### Removing the gRPC API
+
+A REST-only service can remove the gRPC code and its dependencies:
+
+1. Delete `proto/`, `buf.yaml`, `buf.gen.yaml`, `internal/gen/`, `internal/grpchandler/`, `internal/cli/bindgrpc.go`, and `internal/cli/bindgrpc_test.go`.
+2. In `internal/cli/bind.go`, remove the `grpc` and `healthchecks` fields of `serviceHandlers`, and the gRPC server start at the end of `startServiceServers`. In `internal/cli/bind_test.go`, remove the gRPC test cases and assertions, and the `GRPCServerInstrumenter` method of `mockMetricsClientError`.
+3. In `internal/cli/config.go`, remove `cfgServerGRPC`, the `GRPC` field, its defaults, and its validation, and the `servers.grpc` values and cases in `internal/cli/config_test.go`.
+4. In `internal/metrics`, remove `GRPCServerInstrumenter` and the gRPC metrics.
+5. Remove the `servers.grpc` section from the configuration files under `resources`, from `config.schema.json`, and from `doc/CONFIG.md`.
+6. Remove the protobuf toolchain, the `proto*`, `updatebuf`, and `grpc*` targets from the `Makefile`, the `grpcapitest` call from `resources/test/int/entrypoint.sh`, and port 8074 and the `grpcinttest` volume from the docker-compose files.
+7. Run `go mod tidy`.
 
 <a name="docker"></a>
 

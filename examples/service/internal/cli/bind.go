@@ -9,11 +9,13 @@ import (
 	"time"
 
 	"github.com/nuragoexampleowner/nuragoexample/internal/db"
+	"github.com/nuragoexampleowner/nuragoexample/internal/grpchandler"
 	"github.com/nuragoexampleowner/nuragoexample/internal/httphandlerpriv"
 	"github.com/nuragoexampleowner/nuragoexample/internal/httphandlerpub"
 	"github.com/nuragoexampleowner/nuragoexample/internal/item"
 	instr "github.com/nuragoexampleowner/nuragoexample/internal/metrics"
 	"github.com/tecnickcom/nurago/pkg/bootstrap"
+	"github.com/tecnickcom/nurago/pkg/grpcserver"
 	"github.com/tecnickcom/nurago/pkg/healthcheck"
 	"github.com/tecnickcom/nurago/pkg/httpclient"
 	"github.com/tecnickcom/nurago/pkg/httpserver"
@@ -35,18 +37,19 @@ import (
 //   - Enables or disables optional components (service routes and databases)
 //     from configuration.
 //   - Starts monitoring, private, and public servers with consistent timeout,
-//     middleware, panic, and shutdown behavior.
+//     middleware, panic, and shutdown behavior, and the optional gRPC server.
 //   - Upgrades status reporting from default status to dependency-aware health
 //     checks when enabled.
 //
 // The wiring is split into named helpers (newIpifyClient, bindServiceHandlers,
-// newDatabases, startServiceServer).
+// newDatabases, startServiceServers).
 func bind(cfg *appConfig, appInfo *jsendx.AppInfo, mtr instr.Metrics, wg *sync.WaitGroup, sc chan struct{}) bootstrap.BindFunc {
 	return func(ctx context.Context, l *slog.Logger, m metrics.Client) error {
 		jsx := jsendx.NewJSXResp(httputil.NewHTTPResp(l))
 
-		// Sanitizes the HTTP dumps, query strings, and error URLs before they are
-		// logged. One instance is shared by every client and server below.
+		// Sanitizes the HTTP dumps, gRPC message dumps, query strings, and error
+		// URLs before they are logged. One instance is shared by every client and
+		// server below.
 		logRedactor := newLogRedactor()
 
 		// Common outbound HTTP client options shared by every external client
@@ -69,7 +72,7 @@ func bind(cfg *appConfig, appInfo *jsendx.AppInfo, mtr instr.Metrics, wg *sync.W
 			return err
 		}
 
-		serviceBinderPrivate, serviceBinderPublic, statusHandler, err := bindServiceHandlers(ctx, cfg, appInfo, jsx, l, mtr, wg, sc)
+		handlers, err := bindServiceHandlers(ctx, cfg, appInfo, jsx, l, mtr, wg, sc)
 		if err != nil {
 			return err
 		}
@@ -94,7 +97,7 @@ func bind(cfg *appConfig, appInfo *jsendx.AppInfo, mtr instr.Metrics, wg *sync.W
 			httpserver.WithIndexHandlerFunc(jsx.DefaultIndexHandler(appInfo)),
 			httpserver.WithIPHandlerFunc(jsx.DefaultIPHandler(appInfo, ipifyClient.GetPublicIP)),
 			httpserver.WithPingHandlerFunc(jsx.DefaultPingHandler(appInfo)),
-			httpserver.WithStatusHandlerFunc(statusHandler),
+			httpserver.WithStatusHandlerFunc(handlers.status),
 			httpserver.WithRedactFn(logRedactor.BytesToString),
 			httpserver.WithShutdownWaitGroup(wg),
 			httpserver.WithShutdownSignalChan(sc),
@@ -107,17 +110,9 @@ func bind(cfg *appConfig, appInfo *jsendx.AppInfo, mtr instr.Metrics, wg *sync.W
 
 		httpMonitoringServer.StartServer()
 
-		// PRIVATE AND PUBLIC SERVERS
-		//
-		// Both expose only the default ping route plus their binder's routes, so
-		// they are created through the shared startServiceServer helper.
+		// PRIVATE, PUBLIC, AND GRPC SERVERS
 
-		err = startServiceServer(ctx, "private", serviceBinderPrivate, cfgServer(cfg.Servers.Private), l, middleware, logRedactor, wg, sc)
-		if err != nil {
-			return err
-		}
-
-		err = startServiceServer(ctx, "public", serviceBinderPublic, cfgServer(cfg.Servers.Public), l, middleware, logRedactor, wg, sc)
+		err = startServiceServers(ctx, cfg, handlers, l, mtr, middleware, logRedactor, wg, sc)
 		if err != nil {
 			return err
 		}
@@ -157,12 +152,23 @@ func newIpifyClient(cfg *appConfig, baseHTTPClientOpts []httpclient.Option) (*ip
 	return ipifyClient, nil
 }
 
-// bindServiceHandlers wires the private and public service binders together with
-// the status handler.
+// serviceHandlers groups the service binders, the HTTP status handler, and the
+// health checks shared by the HTTP status route and the gRPC health service.
+type serviceHandlers struct {
+	private      httpserver.Binder
+	public       httpserver.Binder
+	grpc         grpcserver.Binder
+	status       http.HandlerFunc
+	healthchecks []healthcheck.HealthCheck
+}
+
+// bindServiceHandlers wires the private, public, and gRPC service binders
+// together with the status handler and the health checks.
 //
-// When the service is disabled it returns no-op binders and the default status
-// handler. When enabled it attaches the real handlers and upgrades the status
-// handler to a dependency-aware health check covering the databases.
+// When the service is disabled it returns no-op binders, the default status
+// handler, and no health checks. When enabled it attaches the real handlers and
+// upgrades the status handler to a dependency-aware health check covering the
+// databases.
 func bindServiceHandlers(
 	ctx context.Context,
 	cfg *appConfig,
@@ -172,18 +178,24 @@ func bindServiceHandlers(
 	mtr instr.Metrics,
 	wg *sync.WaitGroup,
 	sc chan struct{},
-) (httpserver.Binder, httpserver.Binder, http.HandlerFunc, error) {
+) (*serviceHandlers, error) {
 	if !cfg.Enabled {
-		return httpserver.NopBinder(), httpserver.NopBinder(), jsx.DefaultStatusHandler(appInfo), nil
+		return &serviceHandlers{
+			private: httpserver.NopBinder(),
+			public:  httpserver.NopBinder(),
+			grpc:    grpcserver.NopBinder(),
+			status:  jsx.DefaultStatusHandler(appInfo),
+		}, nil
 	}
 
 	reldb, healthchecks, err := newDatabases(ctx, cfg, l, mtr, wg, sc)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 
-	// The item feature needs a database. Without one the public handler is built
-	// with a nil service and the item routes stay unregistered; see BindHTTP.
+	// The item feature needs a database. Without one the public and gRPC handlers
+	// are built with a nil service and the item routes and RPCs stay
+	// unregistered; see BindHTTP and BindGRPC.
 	//
 	// itemSvc must be declared as the interface type and left nil: assigning a
 	// nil *item.Service to it would produce a non-nil interface value, and the
@@ -209,7 +221,13 @@ func bindServiceHandlers(
 		healthcheck.WithResultWriter(jsx.HealthCheckResultWriter(appInfo)),
 	)
 
-	return serviceBinderPrivate, serviceBinderPublic, healthCheckHandler.ServeHTTP, nil
+	return &serviceHandlers{
+		private:      serviceBinderPrivate,
+		public:       serviceBinderPublic,
+		grpc:         grpchandler.New(itemSvc, l),
+		status:       healthCheckHandler.ServeHTTP,
+		healthchecks: healthchecks,
+	}, nil
 }
 
 // newDatabases connects, instruments, and health-checks the main and read
@@ -254,14 +272,15 @@ func newDatabases(
 }
 
 // newLogRedactor builds the redactor that sanitizes the HTTP request and
-// response dumps, query strings, and error URLs written to the logs.
+// response dumps, gRPC message dumps, query strings, and error URLs written to
+// the logs.
 //
-// Wiring one is optional: httpclient, httpserver, and httpreverseproxy already
-// redact with the shared default redactor ([redact.Default]) when the
-// WithRedactFn option is omitted, so this function exists to show how to depart
-// from that default when the service needs it. A [redact.Redactor] is immutable
-// after construction and safe for concurrent use, so a single instance is shared
-// by every client and server.
+// Wiring one is optional: httpclient, httpserver, grpcserver, and
+// httpreverseproxy already redact with the shared default redactor
+// ([redact.Default]) when the WithRedactFn option is omitted, so this function
+// exists to show how to depart from that default when the service needs it. A
+// [redact.Redactor] is immutable after construction and safe for concurrent
+// use, so a single instance is shared by every client and server.
 //
 // The options below are illustrative; the full set also includes
 // [redact.WithMarker] (replace the `***` placeholder) and [redact.WithoutRules]
@@ -301,6 +320,41 @@ func newLogRedactor() *redact.Redactor {
 		// 	redact.RuleCards,
 		// ),
 	)
+}
+
+// startServiceServers starts the private and public HTTP servers and, when
+// enabled, the gRPC server.
+//
+// The HTTP servers expose only the default ping route plus their binder's
+// routes, so they are created through the shared startServiceServer helper.
+// The gRPC server serves the item API on its own listener, with the same health
+// checks as the HTTP status route (see startGRPCServer).
+func startServiceServers(
+	ctx context.Context,
+	cfg *appConfig,
+	handlers *serviceHandlers,
+	l *slog.Logger,
+	mtr instr.Metrics,
+	middleware httpserver.MiddlewareFn,
+	logRedactor *redact.Redactor,
+	wg *sync.WaitGroup,
+	sc chan struct{},
+) error {
+	err := startServiceServer(ctx, "private", handlers.private, cfgServer(cfg.Servers.Private), l, middleware, logRedactor, wg, sc)
+	if err != nil {
+		return err
+	}
+
+	err = startServiceServer(ctx, "public", handlers.public, cfgServer(cfg.Servers.Public), l, middleware, logRedactor, wg, sc)
+	if err != nil {
+		return err
+	}
+
+	if !cfg.Servers.GRPC.Enabled {
+		return nil
+	}
+
+	return startGRPCServer(ctx, cfg.Servers.GRPC, handlers.grpc, handlers.healthchecks, l, mtr, logRedactor, wg, sc)
 }
 
 // startServiceServer builds, starts, and registers a service HTTP server that

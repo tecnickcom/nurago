@@ -19,7 +19,7 @@
 
 If this project is useful to you, please consider [supporting development via GitHub Sponsors](https://github.com/sponsors/tecnickcom).
 
-**`nurago` is a collection of independent Go packages for building backend services**: retries and exponential backoff, HTTP client and server, OpenTelemetry and Prometheus instrumentation, structured logging and log redaction, Argon2id password hashing, JWT, Redis, Valkey, Kafka, AWS S3 and SQS, SQL connection and transaction handling, caching, validation, and configuration loading.
+**`nurago` is a collection of independent Go packages for building backend services**: retries and exponential backoff, HTTP client and server, gRPC client and server, OpenTelemetry and Prometheus instrumentation, structured logging and log redaction, Argon2id password hashing, JWT, Redis, Valkey, Kafka, AWS S3 and SQS, SQL connection and transaction handling, caching, validation, and configuration loading.
 
 Each package is imported on its own and pulls only the dependencies it reaches, so adopting one does not commit you to the rest. Most reach none at all: see [Dependency Footprint](#dependency-footprint).
 
@@ -74,6 +74,7 @@ Guides, package pages, and articles are published on
 - [Packages](https://nurago.org/packages/) - all packages, grouped by what they do.
 - [Getting started](https://nurago.org/docs/getting-started/) - installing, importing a package, and wiring a service lifecycle.
 - [Service scaffolding](https://nurago.org/docs/service-scaffolding/) - generating a complete web service with `make project`.
+- [gRPC services](https://nurago.org/docs/grpc-services/) - gRPC servers and clients, health checks, metrics, and the gRPC API of the example service.
 - [Dependency footprint](https://nurago.org/docs/dependency-footprint/) - what each import pulls into the build, and how to verify it.
 - [Observability](https://nurago.org/docs/observability/) - logging, metrics backends, trace IDs, and log redaction.
 - [Resilience](https://nurago.org/docs/resilience/) - retries, backoff and jitter, periodic work, DNS caching.
@@ -268,6 +269,7 @@ make dbuild
 ## How To Create a New Web Service
 
 The directory `examples/service` contains a sample web service built with `nurago`.
+It serves a REST API and the same API over gRPC, from one business service.
 
 To scaffold a new project:
 
@@ -298,6 +300,7 @@ $ make
 #   make clean          : Remove any build artifact
 #   make coverage       : Generate the coverage report
 #   make dbuild         : Build everything inside a Docker container
+#   make depcheck       : Check that no package reaches an external module it must not reach (e.g. gRPC)
 #   make deps           : Get dependencies
 #   make dockerdev      : Build a base development Docker image
 #   make ensuretarget   : Create the target directories if missing
@@ -345,8 +348,9 @@ $ make x
 # 7. make gendoc        : Regenerate the package READMEs and llms.txt from the source
 # 8. make qa            : Run all tests and static analysis tools
     # 8.1. make linter      : Check the code with multiple linters (golangci/golangci-lint)
-    # 8.2. make test        : Run unit tests (go test)
-    # 8.3. make coverage    : Generate the coverage report (/target/report/coverage.html)
+    # 8.2. make depcheck    : Check the dependency footprint of every package
+    # 8.3. make test        : Run unit tests (go test)
+    # 8.4. make coverage    : Generate the coverage report (/target/report/coverage.html)
 # 9. make example       : Build and test the service example
     # 9.1. make clean       : Remove any build artifact
     # 9.2. make mod         : Download dependencies
@@ -354,11 +358,12 @@ $ make x
     # 9.4. make gendoc      : Generate static documentation from /doc/src (gomplate)
     # 9.5. make generate    : Generate Go code automatically (test mocks)
     # 9.6. make qa          : Run all tests and static analysis tools
-        # 9.6.1. make linter    : Check the code with multiple linters (golangci/golangci-lint)
-        # 9.6.2. make confcheck : Check the configuration files (jv)
-        # 9.6.3. make test      : Run unit tests (go test)
-        # 9.6.4. make coverage  : Generate the coverage report (target/report/coverage.html)
-    # 8.7. make build       : Compile the application (go build > target/usr/bin/nuragoexample)
+        # 9.6.1. make protolint : Check the protobuf API definition (buf lint)
+        # 9.6.2. make linter    : Check the code with multiple linters (golangci/golangci-lint)
+        # 9.6.3. make confcheck : Check the configuration files (jv)
+        # 9.6.4. make test      : Run unit tests (go test)
+        # 9.6.5. make coverage  : Generate the coverage report (target/report/coverage.html)
+    # 9.7. make build       : Compile the application (go build > target/usr/bin/nuragoexample)
 ```
 
 ### Create a new project from the examples/service template
@@ -392,25 +397,28 @@ $ cd ~/GO/src/myproject/
 
 $ make x
 
-# DEVMODE=LOCAL make format clean mod deps gendoc generate qa build docker dockertest
+# DEVMODE=LOCAL make format clean mod deps gendoc protogen generate qa build docker dockertest
 
 #  1. make format      : Format the source code
 #  2. make clean       : Remove any build artifact
 #  3. make mod         : Download dependencies
-#  4. make deps        : Get dependencies
+#  4. make deps        : Get dependencies (golangci-lint and the protobuf toolchain)
 #  5. make gendoc      : Generate static documentation from /doc/src (gomplate)
-#  6. make generate    : Generate Go code automatically (test mocks)
-#  7. make qa          : Run all tests and static analysis tools
-    #  7.1. make linter    : Check the code with multiple linters (golangci/golangci-lint)
-    #  7.2. make confcheck : Check the configuration files (jv)
-    #  7.3. make test      : Run unit tests (go test)
-    #  7.4. make coverage  : Generate the coverage report (target/report/coverage.html)
-#  8. make build       : Compile the application (go build > target/usr/bin/nuragoexample)
-#  9. make docker      : Build a scratch Docker container to run this service
-# 10. make dockertest  : Test the newly built Docker container in an ephemeral Docker Compose environment
-    # 10.1. DEPLOY_ENV=int make openapitest apitest
-        # 10.1.1. make openapitest : Test the OpenAPI specification with randomly generated Schemathesis tests
-        # 10.1.2. make apitest     : Execute API tests with venom
+#  6. make protogen    : Generate the Go code from the protobuf API definition (buf)
+#  7. make generate    : Generate Go code automatically (test mocks)
+#  8. make qa          : Run all tests and static analysis tools
+    #  8.1. make protolint : Check the protobuf API definition (buf lint)
+    #  8.2. make linter    : Check the code with multiple linters (golangci/golangci-lint)
+    #  8.3. make confcheck : Check the configuration files (jv)
+    #  8.4. make test      : Run unit tests (go test)
+    #  8.5. make coverage  : Generate the coverage report (target/report/coverage.html)
+#  9. make build       : Compile the application (go build > target/usr/bin/nuragoexample)
+# 10. make docker      : Build a scratch Docker container to run this service
+# 11. make dockertest  : Test the newly built Docker container in an ephemeral Docker Compose environment
+    # 11.1. DEPLOY_ENV=int make apitest grpcapitest openapitest
+        # 11.1.1. make apitest     : Execute API tests with venom
+        # 11.1.2. make grpcapitest : Execute the gRPC API integration tests (go test)
+        # 11.1.3. make openapitest : Test the OpenAPI specification with randomly generated Schemathesis tests
 ```
 
 ## Contributing

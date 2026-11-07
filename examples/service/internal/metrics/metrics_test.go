@@ -1,11 +1,13 @@
 package metrics
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/require"
+	"github.com/tecnickcom/nurago/pkg/metrics/prometheus/prometheusgrpc"
 )
 
 func TestNew(t *testing.T) {
@@ -23,6 +25,25 @@ func TestCreateMetricsClientFunc(t *testing.T) {
 	c, err := m.CreateMetricsClientFunc()
 	require.NoError(t, err, "CreateMetricsClientFunc() unexpected error = %v", err)
 	require.NotNil(t, c, "metrics.Client should not be nil")
+}
+
+// TestCreateMetricsClientFuncGRPCError mutates the package-level
+// grpcMetricsNewFn, so it must not run in parallel with the other tests.
+//
+//nolint:paralleltest
+func TestCreateMetricsClientFuncGRPCError(t *testing.T) {
+	oldGRPCMetricsNewFn := grpcMetricsNewFn
+
+	defer func() { grpcMetricsNewFn = oldGRPCMetricsNewFn }()
+
+	grpcMetricsNewFn = func(_ ...prometheusgrpc.Option) (*prometheusgrpc.Metrics, error) {
+		return nil, errors.New("TEST ERROR")
+	}
+
+	m := New()
+	c, err := m.CreateMetricsClientFunc()
+	require.Error(t, err)
+	require.Nil(t, c)
 }
 
 func TestIncExampleCounter(t *testing.T) {
@@ -89,4 +110,22 @@ func TestSqlOpen(t *testing.T) {
 	require.NotNil(t, db)
 
 	db.Close()
+}
+
+func TestGRPCServerInstrumenter(t *testing.T) {
+	t.Parallel()
+
+	m := New()
+
+	i, err := m.GRPCServerInstrumenter()
+	require.ErrorIs(t, err, errMetricsClientNotInitialized, "expected error when the metrics client is not initialized")
+	require.Nil(t, i)
+
+	_, err = m.CreateMetricsClientFunc()
+	require.NoError(t, err)
+
+	i, err = m.GRPCServerInstrumenter()
+	require.NoError(t, err)
+	require.NotNil(t, i)
+	require.NotEmpty(t, i.ServerOptions())
 }

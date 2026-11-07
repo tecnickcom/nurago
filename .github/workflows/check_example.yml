@@ -22,6 +22,9 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v7
+        with:
+          # The protobuf breaking change check compares with the main branch.
+          fetch-depth: 0
       - name: setup go build environment
         uses: actions/setup-go@v7
         with:
@@ -29,7 +32,16 @@ jobs:
           check-latest: true
           cache: true
       - name: linter
-        run: cd examples/service && make mod deps linter govulncheck GOPATH=$(go env GOPATH)
+        run: cd examples/service && make mod deps protolint linter govulncheck GOPATH=$(go env GOPATH)
+      - name: protobuf breaking changes
+        run: |
+          git show-ref --verify --quiet refs/heads/main || git branch main origin/main
+          cd examples/service && make protobreaking GOPATH=$(go env GOPATH)
+      - name: generated protobuf code is up to date
+        run: |
+          cd examples/service && make protogen GOPATH=$(go env GOPATH)
+          test -z "$(git status --porcelain -- internal/gen)" \
+            || (git status --porcelain -- internal/gen && echo "Generated protobuf code is stale: run 'make protogen' and commit the result." && exit 1)
       - name: go.mod and go.sum are tidy
         run: cd examples/service && make modcheck GOPATH=$(go env GOPATH)
 

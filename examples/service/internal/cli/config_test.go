@@ -20,7 +20,8 @@ func Test_appConfig_SetDefaults(t *testing.T) {
 	require.True(t, v.GetBool("enabled"))
 	require.Equal(t, dbDriver, v.GetString("db.main.driver"))
 	require.Equal(t, dbDriver, v.GetString("db.read.driver"))
-	require.Len(t, v.AllKeys(), 24)
+	require.False(t, v.GetBool("servers.grpc.enabled"))
+	require.Len(t, v.AllKeys(), 30)
 }
 
 func getValidTestConfig() appConfig {
@@ -53,6 +54,11 @@ func getValidTestConfig() appConfig {
 			Public: cfgServerPublic{
 				Address: ":1233",
 				Timeout: 13,
+			},
+			GRPC: cfgServerGRPC{
+				Enabled: true,
+				Address: ":1235",
+				Timeout: 14,
 			},
 		},
 		DB: cfgDatabases{
@@ -99,6 +105,7 @@ func Test_appConfig_Validate_validatorError(t *testing.T) {
 	require.Error(t, err, "an error from the validator constructor was expected")
 }
 
+//nolint:maintidx
 func Test_appConfig_Validate(t *testing.T) {
 	t.Parallel()
 
@@ -214,6 +221,57 @@ func Test_appConfig_Validate(t *testing.T) {
 			name:    "empty servers.public.timeout",
 			fcfg:    func(cfg appConfig) appConfig { cfg.Servers.Public.Timeout = 0; return cfg },
 			wantErr: true,
+		},
+		{
+			name:    "empty servers.grpc.address",
+			fcfg:    func(cfg appConfig) appConfig { cfg.Servers.GRPC.Address = ""; return cfg },
+			wantErr: true,
+		},
+		{
+			name:    "invalid servers.grpc.address",
+			fcfg:    func(cfg appConfig) appConfig { cfg.Servers.GRPC.Address = "-WRONG_GRPC_ADDRESS-"; return cfg },
+			wantErr: true,
+		},
+		{
+			name:    "empty servers.grpc.timeout",
+			fcfg:    func(cfg appConfig) appConfig { cfg.Servers.GRPC.Timeout = 0; return cfg },
+			wantErr: true,
+		},
+		{
+			name: "servers.grpc.tls_cert_file without servers.grpc.tls_key_file",
+			fcfg: func(cfg appConfig) appConfig {
+				cfg.Servers.GRPC.TLSCertFile = "config_test.go"
+				return cfg
+			},
+			wantErr: true,
+		},
+		{
+			name: "missing servers.grpc.tls_cert_file",
+			fcfg: func(cfg appConfig) appConfig {
+				cfg.Servers.GRPC.TLSCertFile = "/missing/cert.pem"
+				cfg.Servers.GRPC.TLSKeyFile = "config_test.go"
+
+				return cfg
+			},
+			wantErr: true,
+		},
+		{
+			name: "valid servers.grpc TLS files",
+			fcfg: func(cfg appConfig) appConfig {
+				cfg.Servers.GRPC.TLSCertFile = "config_test.go"
+				cfg.Servers.GRPC.TLSKeyFile = "config.go"
+
+				return cfg
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid config with gRPC server disabled and empty fields",
+			fcfg: func(cfg appConfig) appConfig {
+				cfg.Servers.GRPC = cfgServerGRPC{}
+				return cfg
+			},
+			wantErr: false,
 		},
 		{
 			name:    "empty clients",

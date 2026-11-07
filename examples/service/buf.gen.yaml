@@ -1,0 +1,23 @@
+# Buf code generation configuration. Run with "make protogen".
+# Ref.: https://buf.build/docs/configuration/v2/buf-gen-yaml/
+#
+# The plugins are local binaries installed by "make deps", so generation needs
+# no network access and its output depends only on the pinned plugin versions.
+#
+# The Go import path is passed with the M plugin option instead of a
+# go_package option in the .proto files. A go_package option would be embedded
+# in the serialized file descriptor of the generated code, where a text
+# substitution of the module path (as done by "make project") would corrupt it.
+version: v2
+clean: true
+plugins:
+  - local: protoc-gen-go
+    out: internal/gen
+    opt:
+      - paths=source_relative
+      - Mitem/v1/item.proto=github.com/nuragoexampleowner/nuragoexample/internal/gen/item/v1;itemv1
+  - local: protoc-gen-go-grpc
+    out: internal/gen
+    opt:
+      - paths=source_relative
+      - Mitem/v1/item.proto=github.com/nuragoexampleowner/nuragoexample/internal/gen/item/v1;itemv1

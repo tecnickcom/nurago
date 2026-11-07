@@ -4,10 +4,13 @@ package metrics
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/tecnickcom/nurago/pkg/grpcutil"
 	"github.com/tecnickcom/nurago/pkg/metrics"
 	prom "github.com/tecnickcom/nurago/pkg/metrics/prometheus"
+	"github.com/tecnickcom/nurago/pkg/metrics/prometheus/prometheusgrpc"
 )
 
 const (
@@ -17,6 +20,9 @@ const (
 	labelCode = "code"
 )
 
+// grpcMetricsNewFn defines the gRPC metrics constructor and can be overwritten for testing.
+var grpcMetricsNewFn = prometheusgrpc.New //nolint:gochecknoglobals
+
 // errMetricsClientNotInitialized is returned when a method requiring the
 // underlying metrics client is called before CreateMetricsClientFunc.
 var errMetricsClientNotInitialized = errors.New("metrics client not initialized: call CreateMetricsClientFunc first")
@@ -24,6 +30,7 @@ var errMetricsClientNotInitialized = errors.New("metrics client not initialized:
 // Metrics is the interface for the custom metrics.
 type Metrics interface {
 	CreateMetricsClientFunc() (metrics.Client, error)
+	GRPCServerInstrumenter() (grpcutil.ServerInstrumenter, error)
 	IncExampleCounter(code string)
 	InstrumentDB(dbName string, db *sql.DB) error
 	SqlOpen(driverName, dsn string) (*sql.DB, error)
@@ -32,6 +39,8 @@ type Metrics interface {
 // Client groups the custom collectors to be shared with other packages.
 type Client struct {
 	libClient metrics.Client
+	// grpcMetrics holds the gRPC server metrics.
+	grpcMetrics *prometheusgrpc.Metrics
 	// collectorExample is an example collector.
 	collectorExample *prometheus.CounterVec
 }
@@ -51,17 +60,34 @@ func New() *Client {
 }
 
 // CreateMetricsClientFunc constructs the underlying metrics client and
-// registers all custom collectors. It is passed to bootstrap during startup.
+// registers all custom collectors, including the gRPC server metrics. It is
+// passed to bootstrap during startup.
 func (m *Client) CreateMetricsClientFunc() (metrics.Client, error) {
-	var err error
+	grpcMetrics, err := grpcMetricsNewFn()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the gRPC metrics: %w", err)
+	}
 
 	opts := []prom.Option{
 		prom.WithCollector(m.collectorExample),
+		prom.WithCollector(grpcMetrics),
 	}
 
+	m.grpcMetrics = grpcMetrics
 	m.libClient, err = prom.New(opts...)
 
 	return m.libClient, err //nolint:wrapcheck
+}
+
+// GRPCServerInstrumenter returns the gRPC server metrics, to be passed to
+// grpcserver.WithInstrumenter. It returns an error if the metrics client is not
+// initialized.
+func (m *Client) GRPCServerInstrumenter() (grpcutil.ServerInstrumenter, error) {
+	if m.grpcMetrics == nil {
+		return nil, errMetricsClientNotInitialized
+	}
+
+	return m.grpcMetrics, nil
 }
 
 // IncExampleCounter increments the example counter for a given status code

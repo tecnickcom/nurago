@@ -151,6 +151,11 @@ dbuild: dockerdev
 	CVSPATH=$(CVSPATH) VENDOR=$(LCVENDOR) PROJECT=$(PROJECT) MAKETARGET='$(MAKETARGET)' DOCKERTAG='$(DOCKERTAG)' "$(CURRENTDIR)dockerbuild.sh"
 	@exit `cat $(TARGETDIR)/make.exit`
 
+## Check that no package reaches an external module it must not reach (e.g. gRPC)
+.PHONY: depcheck
+depcheck:
+	@./resources/depcheck/depcheck.sh
+
 ## Get dependencies
 .PHONY: deps
 deps: ensuretarget
@@ -250,7 +255,7 @@ project:
 
 ## Run all tests and static analysis tools
 .PHONY: qa
-qa: linter govulncheck test coverage
+qa: linter govulncheck depcheck test coverage
 
 ## Tag the Git repository
 .PHONY: tag

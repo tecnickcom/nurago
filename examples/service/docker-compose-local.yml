@@ -25,6 +25,7 @@ services:
       - "8071:8071"
       - "8072:8072"
       - "8073:8073"
+      - "8074:8074"
     volumes:
       - ./target/binutil/dockerize:/usr/bin/dockerize
 

@@ -14,9 +14,11 @@ import (
 	"github.com/nuragoexampleowner/nuragoexample/internal/metrics"
 	"github.com/stretchr/testify/require"
 	"github.com/tecnickcom/nurago/pkg/bootstrap"
+	"github.com/tecnickcom/nurago/pkg/grpcutil"
 	"github.com/tecnickcom/nurago/pkg/httputil"
 	"github.com/tecnickcom/nurago/pkg/httputil/jsendx"
 	libmtr "github.com/tecnickcom/nurago/pkg/metrics"
+	"google.golang.org/grpc"
 )
 
 type mockMetricsClientError struct{}
@@ -34,6 +36,10 @@ func (c *mockMetricsClientError) SqlOpen(driverName, dsn string) (*sql.DB, error
 }
 
 func (c *mockMetricsClientError) IncExampleCounter(_ string) {}
+
+func (c *mockMetricsClientError) GRPCServerInstrumenter() (grpcutil.ServerInstrumenter, error) {
+	return nil, errors.New("TEST ERROR")
+}
 
 // newValidDBMock registers a sqlmock database for the given DSN, optionally
 // expecting the startup ping and health-check query.
@@ -56,17 +62,19 @@ func newValidDBMock(t *testing.T, dsn string, expect bool) (sqlmock.Sqlmock, fun
 	}
 }
 
-// Test_bindServiceHandlers pins the requirement that the item endpoints are
-// registered only when a database is configured: with the database off the
-// public server exposes /uid alone.
+// Test_bindServiceHandlers pins the requirement that the item endpoints and
+// RPCs are registered only when a database is configured: with the database
+// off the public server exposes /uid alone and the gRPC server no item service.
 func Test_bindServiceHandlers(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		fcfg           func(cfg appConfig) appConfig
-		wantPubRoutes  int
-		wantPrivRoutes int
+		name             string
+		fcfg             func(cfg appConfig) appConfig
+		wantPubRoutes    int
+		wantPrivRoutes   int
+		wantGRPCServices int
+		wantHealthChecks int
 	}{
 		{
 			name: "binds no routes with the service disabled",
@@ -99,8 +107,10 @@ func Test_bindServiceHandlers(t *testing.T) {
 
 				return cfg
 			},
-			wantPubRoutes:  5,
-			wantPrivRoutes: 1,
+			wantPubRoutes:    5,
+			wantPrivRoutes:   1,
+			wantGRPCServices: 1,
+			wantHealthChecks: 2,
 		},
 	}
 
@@ -128,14 +138,20 @@ func Test_bindServiceHandlers(t *testing.T) {
 			appInfo := &jsendx.AppInfo{ProgramName: "test", ProgramVersion: "0.0.0", ProgramRelease: "0"}
 			jsx := jsendx.NewJSXResp(httputil.NewHTTPResp(slog.Default()))
 
-			priv, pub, status, err := bindServiceHandlers(
+			h, err := bindServiceHandlers(
 				t.Context(), &cfg, appInfo, jsx, slog.Default(), mtr, &sync.WaitGroup{}, make(chan struct{}),
 			)
 
 			require.NoError(t, err)
-			require.NotNil(t, status)
-			require.Len(t, priv.BindHTTP(t.Context()), tt.wantPrivRoutes)
-			require.Len(t, pub.BindHTTP(t.Context()), tt.wantPubRoutes)
+			require.NotNil(t, h.status)
+			require.Len(t, h.private.BindHTTP(t.Context()), tt.wantPrivRoutes)
+			require.Len(t, h.public.BindHTTP(t.Context()), tt.wantPubRoutes)
+			require.Len(t, h.healthchecks, tt.wantHealthChecks)
+
+			grpcSrv := grpc.NewServer()
+
+			require.NoError(t, h.grpc.BindGRPC(t.Context(), grpcSrv))
+			require.Len(t, grpcSrv.GetServiceInfo(), tt.wantGRPCServices)
 		})
 	}
 }
@@ -281,6 +297,32 @@ func Test_bind(t *testing.T) {
 			expectDBMain: true,
 			expectDBRead: false,
 			wantErr:      true,
+		},
+		{
+			name: "fails with gRPC service port already bound",
+			fcfg: func(cfg appConfig) appConfig {
+				cfg.Enabled = false
+				cfg.Servers.Monitoring.Address = ":30061"
+				cfg.Servers.Private.Address = ":30062"
+				cfg.Servers.Public.Address = ":30063"
+				cfg.Servers.GRPC.Address = ":30064"
+
+				return cfg
+			},
+			preBindAddr:    ":30064",
+			wantErr:        true,
+			wantTimeoutErr: false,
+		},
+		{
+			name: "succeed with the gRPC server disabled",
+			fcfg: func(cfg appConfig) appConfig {
+				cfg.Enabled = false
+				cfg.Servers.GRPC.Enabled = false
+				cfg.Servers.GRPC.Address = ""
+
+				return cfg
+			},
+			wantErr: false,
 		},
 		{
 			name: "success with all features enabled",

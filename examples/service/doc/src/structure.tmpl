@@ -3,8 +3,10 @@ That structure matters because it lets you extend the example without mixing app
 
 ## Top Features
 
-* **Three-server runtime layout** via monitoring, private, and public HTTP endpoints.
+* **Three-server runtime layout** via monitoring, private, and public HTTP endpoints, plus an optional gRPC server.
 	Why it matters: it shows how to isolate operational traffic from internal and external APIs from day one.
+* **One business service, two transports** in `internal/httphandlerpub` and `internal/grpchandler`.
+	Why it matters: REST and gRPC clients get the same behavior and error mapping from a single implementation.
 * **Configuration-first bootstrap** in `internal/cli`.
 	Why it matters: startup, logging, metrics, health checks, and graceful shutdown are all wired in one place, which keeps new features easier to add safely.
 * **Operational assets shipped with the codebase** in `resources`.
@@ -18,6 +20,7 @@ That structure matters because it lets you extend the example without mixing app
 | --- | --- |
 | `cmd` | Application entry point. Holds `main.go`, the executable startup flow, and package-level service documentation. |
 | `doc` | Project documentation sources and generated documentation assets. |
+| `proto` | Protobuf definition of the gRPC API. |
 | `internal` | Private application packages that wire configuration, handlers, metrics, and optional dependencies. |
 | `resources` | Runtime, packaging, database, dashboard, and test fixture assets used by developers, CI, and deployment workflows. |
 | `target` | Generated build outputs, reports, temporary test artifacts, and packaged files. |
@@ -27,6 +30,8 @@ That structure matters because it lets you extend the example without mixing app
 | Path | Function |
 | --- | --- |
 | `go.mod` | Defines the module and the service-specific dependency graph. |
+| `buf.yaml` | Buf module, lint, and breaking change configuration for `proto`. |
+| `buf.gen.yaml` | Buf code generation configuration for `internal/gen`. |
 | `Makefile` | Main developer workflow entry point for build, test, documentation, and packaging commands. |
 | `docker-compose-local.yml` | Local development stack definition. |
 | `docker-compose-int.yml` | Integration-test stack definition. |
@@ -67,6 +72,8 @@ This folder contains the application-specific implementation details that should
 | --- | --- |
 | `internal/cli` | Loads configuration, defines CLI flags, builds the dependency graph, and starts the service lifecycle. |
 | `internal/db` | Shared database abstractions used by the service wiring. |
+| `internal/gen` | Go code generated from `proto` by `make protogen`. Do not edit. |
+| `internal/grpchandler` | gRPC item API implementation, plus its integration tests (build tag `integration`). |
 | `internal/httphandlerpriv` | Private API route definitions and handlers. |
 | `internal/httphandlerpub` | Public API route definitions and handlers. |
 | `internal/item` | Example business domain: domain types, service rules, and the SQL repository behind the item endpoints. |

@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package item.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// ItemService manages items: named things with a quantity.
+service ItemService {
+  // CreateItem stores a new item. It is the gRPC counterpart of POST /items.
+  // Errors: INVALID_ARGUMENT for an invalid name, ALREADY_EXISTS for a
+  // duplicate name.
+  rpc CreateItem(CreateItemRequest) returns (CreateItemResponse);
+
+  // ListItems returns one page of items, most recently created first. It is
+  // the gRPC counterpart of GET /items.
+  // Errors: INVALID_ARGUMENT for a limit above 100.
+  rpc ListItems(ListItemsRequest) returns (ListItemsResponse);
+
+  // GetItem returns a single item. It is the gRPC counterpart of
+  // GET /items/{id}.
+  // Errors: INVALID_ARGUMENT for an empty id, NOT_FOUND for an unknown id.
+  rpc GetItem(GetItemRequest) returns (GetItemResponse);
+
+  // DeleteItem removes a single item. It is the gRPC counterpart of
+  // DELETE /items/{id}.
+  // Errors: INVALID_ARGUMENT for an empty id, NOT_FOUND for an unknown id.
+  rpc DeleteItem(DeleteItemRequest) returns (DeleteItemResponse);
+}
+
+// Item is a named thing with a quantity.
+message Item {
+  // Identifier (UUIDv7) assigned on creation.
+  string id = 1;
+
+  // Unique name, 1 to 128 characters.
+  string name = 2;
+
+  // Quantity, within the range of the INT UNSIGNED column.
+  uint32 quantity = 3;
+
+  // Creation time, with microsecond precision.
+  google.protobuf.Timestamp created_at = 4;
+}
+
+// CreateItemRequest holds the fields of a new item.
+message CreateItemRequest {
+  // Unique name, 1 to 128 characters.
+  string name = 1;
+
+  // Quantity.
+  uint32 quantity = 2;
+}
+
+// CreateItemResponse holds the created item.
+message CreateItemResponse {
+  // The created item.
+  Item item = 1;
+}
+
+// ListItemsRequest selects one page of items.
+message ListItemsRequest {
+  // Maximum number of items to return: 0 selects the default (20), and
+  // values above 100 are rejected.
+  uint32 limit = 1;
+}
+
+// ListItemsResponse holds one page of items.
+message ListItemsResponse {
+  // Items, most recently created first.
+  repeated Item items = 1;
+}
+
+// GetItemRequest selects a single item.
+message GetItemRequest {
+  // Item identifier.
+  string id = 1;
+}
+
+// GetItemResponse holds the requested item.
+message GetItemResponse {
+  // The requested item.
+  Item item = 1;
+}
+
+// DeleteItemRequest selects the item to remove.
+message DeleteItemRequest {
+  // Item identifier.
+  string id = 1;
+}
+
+// DeleteItemResponse is the empty answer to a successful DeleteItem.
+message DeleteItemResponse {}
