@@ -14,8 +14,15 @@ It standardizes health probing around three pieces:
   - [Handler]: HTTP aggregator that runs checks concurrently and writes a
     combined result
 
+The check model and the parallel execution are provided by
+[healthcheck/healthrun](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/healthcheck/healthrun), which has no HTTP
+dependency: `HealthChecker`, `HealthCheckFunc` and `HealthCheck` are aliases
+of its types.
+
 The default handler response is JSON and maps each check ID to either "OK" or
-the check error message.
+the check error message. `Handler.Run` returns the same per-check outcomes
+without writing a response, for non-HTTP transports such as the gRPC health
+service of github.com/tecnickcom/nurago/pkg/grpcserver.
 
 The client packages in this library expose a HealthCheck method that satisfies
 `HealthChecker` directly, so they register without an adapter:

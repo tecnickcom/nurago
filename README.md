@@ -99,16 +99,16 @@ keeps only the modules your imports actually reach.
 
 <!-- gendoc:deps:start -->
 
-**40 of the 72 packages reach no external module at all**, using nothing
+**41 of the 73 packages reach no external module at all**, using nothing
 beyond the Go standard library:
 
 `backoff`, `countrycode`, `countryphone`, `decint`, `dnscache`, `encode`,
 `encrypt`, `enumbitmap`, `enumcache`, `enumdb`, `errutil`, `filter`,
-`httpclient`, `httpretrier`, `ipify`, `logutil`, `maputil`, `metrics`,
-`mysqllock`, `numtrie`, `paging`, `periodic`, `phonekeypad`, `random`,
-`redact`, `retrier`, `sfcache`, `sliceutil`, `sqlconn`, `sqltransaction`,
-`sqlutil`, `stringmetric`, `strsplit`, `threadsafe`, `timeutil`, `traceid`,
-`tsmap`, `tsslice`, `typeutil`, `uhex`.
+`healthrun`, `httpclient`, `httpretrier`, `ipify`, `logutil`, `maputil`,
+`metrics`, `mysqllock`, `numtrie`, `paging`, `periodic`, `phonekeypad`,
+`random`, `redact`, `retrier`, `sfcache`, `sliceutil`, `sqlconn`,
+`sqltransaction`, `sqlutil`, `stringmetric`, `strsplit`, `threadsafe`,
+`timeutil`, `traceid`, `tsmap`, `tsslice`, `typeutil`, `uhex`.
 
 Each package README lists its own footprint. Verify any of them with:
 
@@ -138,7 +138,7 @@ Each package also has a page on
 
 <!-- gendoc:catalog:start -->
 
-All 72 packages, each linking to its own README. The description is the
+All 73 packages, each linking to its own README. The description is the
 first sentence of the package documentation.
 
 - [awsopt](pkg/awsopt) - configures the aws-sdk-go-v2 library consistently across multiple AWS service clients. It centralizes config.LoadOptionsFunc calls into a composable Options slice that can be built once and handed to any AWS-based package in this library.
@@ -161,6 +161,7 @@ first sentence of the package documentation.
 - [grpcserver](pkg/grpcserver) - provides a configurable gRPC server bootstrap for Go services.
 - [grpcutil](pkg/grpcutil) - provides shared gRPC helpers for trace ID propagation through metadata and for mapping between gRPC status codes and HTTP status codes.
 - [healthcheck](pkg/healthcheck) - runs dependency probes concurrently and aggregates them into a single HTTP health endpoint.
+- [healthrun](pkg/healthcheck/healthrun) - runs dependency probes concurrently and reports the outcome of each one, without any transport dependency.
 - [httpclient](pkg/httpclient) - provides a configurable outbound HTTP client with trace propagation and structured request/response logging.
 - [httpretrier](pkg/httpretrier) - provides configurable retry execution for outbound HTTP requests.
 - [httpreverseproxy](pkg/httpreverseproxy) - provides a reverse-proxy client built on top of net/http/httputil.ReverseProxy.

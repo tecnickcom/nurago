@@ -22,6 +22,8 @@ The API is compatible with net/http:
     caller has verified the user's identity by its own means.
   - [JWT.VerifyToken]: validates a raw token string that arrived over any
     transport (WebSocket messages, queue payloads, gRPC metadata).
+  - [NewContextWithClaims]: stores verified claims in a context for retrieval
+    via `ClaimsFromContext`, outside `JWT.Middleware`.
 
 Credential verification is delegated to a caller-provided
 `VerifyCredentialsFn`, so the package is agnostic to the password-hashing

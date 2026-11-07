@@ -48,6 +48,7 @@ type config struct {
 	shutdownTimeout      time.Duration
 	tlsConfig            *tls.Config
 	reflection           bool
+	health               *healthConfig
 	redactFn             RedactFn
 	maxDumpSize          int
 	disableRequestLogger bool

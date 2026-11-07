@@ -52,11 +52,22 @@ type Credentials struct {
 type claimsCtxKey struct{}
 
 // ClaimsFromContext returns the verified claims stored in ctx by
-// [JWT.Middleware], reporting whether they were present.
+// [JWT.Middleware] or [NewContextWithClaims], reporting whether they were
+// present.
 func ClaimsFromContext(ctx context.Context) (*Claims, bool) {
 	claims, ok := ctx.Value(claimsCtxKey{}).(*Claims)
 
-	return claims, ok
+	return claims, ok && claims != nil
+}
+
+// NewContextWithClaims returns a copy of ctx carrying claims, for retrieval via
+// [ClaimsFromContext]. It is the context step of [JWT.Middleware] for other
+// transports, such as a gRPC interceptor that validates a token from metadata
+// with [JWT.VerifyToken]. Store only claims returned without error by a
+// verification method. A nil claims hides any claims already in ctx, so
+// [ClaimsFromContext] reports none.
+func NewContextWithClaims(ctx context.Context, claims *Claims) context.Context {
+	return context.WithValue(ctx, claimsCtxKey{}, claims)
 }
 
 // LoginHandler authenticates credentials and returns a signed JWT.
@@ -250,7 +261,7 @@ func (c *JWT) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), claimsCtxKey{}, claims)))
+		next.ServeHTTP(w, r.WithContext(NewContextWithClaims(r.Context(), claims)))
 	})
 }
 

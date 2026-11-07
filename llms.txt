@@ -1,7 +1,7 @@
 # nurago
 
-> 72 independent Go packages for backend services. Each is imported on its
-> own and pulls only its own dependencies; 40 reach no external module at all.
+> 73 independent Go packages for backend services. Each is imported on its
+> own and pulls only its own dependencies; 41 reach no external module at all.
 
 Install: `go get github.com/tecnickcom/nurago`
 Website: https://nurago.org/
@@ -31,6 +31,7 @@ Reference documentation: https://pkg.go.dev/github.com/tecnickcom/nurago
 - [grpcserver](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/grpcserver): Package grpcserver provides a configurable gRPC server bootstrap for Go services.
 - [grpcutil](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/grpcutil): Package grpcutil provides shared gRPC helpers for trace ID propagation through metadata and for mapping between gRPC status codes and HTTP status codes.
 - [healthcheck](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/healthcheck): Package healthcheck runs dependency probes concurrently and aggregates them into a single HTTP health endpoint.
+- [healthrun](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/healthcheck/healthrun): Package healthrun runs dependency probes concurrently and reports the outcome of each one, without any transport dependency.
 - [httpclient](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/httpclient): Package httpclient provides a configurable outbound HTTP client with trace propagation and structured request/response logging.
 - [httpretrier](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/httpretrier): Package httpretrier provides configurable retry execution for outbound HTTP requests.
 - [httpreverseproxy](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/httpreverseproxy): Package httpreverseproxy provides a reverse-proxy client built on top of net/http/httputil.ReverseProxy.

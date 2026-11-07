@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tecnickcom/nurago/pkg/healthcheck/healthrun"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 )
@@ -225,6 +226,44 @@ func WithTLSConfig(tlsConfig *tls.Config) Option {
 func WithReflection() Option {
 	return func(cfg *config) error {
 		cfg.reflection = true
+		return nil
+	}
+}
+
+// WithHealthService registers the standard grpc.health.v1.Health service
+// (Check, Watch, List) backed by checks, which run as in healthrun.Runner.
+// healthcheck.HealthCheck is the same type, so the checks of an HTTP health
+// endpoint can be reused. The service name "" reports SERVING only when every
+// check passes; each non-empty check ID is also a service name that reports
+// the checks registered under it. When the server starts shutting down, every
+// service reports NOT_SERVING and open Watch streams end. The checks slice is
+// copied. At most 99 distinct non-empty check IDs are accepted, so that List
+// reports at most 100 services. A Binder that registers its own health service
+// makes New return ErrServiceRegistration.
+func WithHealthService(checks []healthrun.HealthCheck, opts ...HealthOption) Option {
+	return func(cfg *config) error {
+		if healthServiceCount(checks) > maxHealthListServices {
+			return fmt.Errorf("too many health check IDs: the maximum is %d", maxHealthListServices-1)
+		}
+
+		hc := &healthConfig{
+			checks:        checks,
+			watchInterval: defaultHealthWatchInterval,
+		}
+
+		for _, applyOpt := range opts {
+			if applyOpt == nil {
+				return errors.New("healthOption is required")
+			}
+
+			err := applyOpt(hc)
+			if err != nil {
+				return err
+			}
+		}
+
+		cfg.health = hc
+
 		return nil
 	}
 }

@@ -45,6 +45,29 @@ Every unary and streaming RPC passes through, outermost first:
   - Custom interceptors added with `WithUnaryInterceptor` and
     `WithStreamInterceptor`, in the order given.
 
+## Health Service
+
+`WithHealthService` registers the standard grpc.health.v1.Health service,
+backed by github.com/tecnickcom/nurago/pkg/healthcheck/healthrun checks
+(healthcheck.HealthCheck is the same type):
+  - Check: runs the checks of the requested service. The service name ""
+    covers every check; each non-empty check ID is also a service name.
+    Unknown services are answered with codes.NotFound.
+  - List: runs every check once and reports all the services, at most 100,
+    since `WithHealthService` accepts at most 99 distinct check IDs.
+  - Watch: while a service has open streams, runs its checks once per
+    interval (see `WithHealthWatchInterval`), shared by all the streams, and
+    sends the status when it changes.
+  - Shutdown: once `GRPCServer.Shutdown` starts, every service reports
+    NOT_SERVING, and open Watch streams receive NOT_SERVING and end with
+    codes.Unavailable, so they do not delay the graceful stop.
+
+Checks run on every Check and List request and once per Watch interval of
+each watched service. Concurrent Check, List and Watch calls on the same
+service share one run. Bound them with `WithHealthCheckTimeout`, and exclude
+frequently polled health methods from request logging with
+`WithoutMethodLogger` when needed.
+
 ## Behavior
 
   - Lifecycle: non-blocking start, context-aware shutdown, configurable
@@ -68,6 +91,12 @@ Server reflection (`WithReflection`) lets any client list and describe every
 registered service and message type. Enable it only on internal or
 administrative listeners that are not reachable from the public internet, or
 protect it with an authentication interceptor.
+
+The health service List method returns every check ID, which can name
+internal dependencies. The health service is not exempt from the custom
+interceptors: an authentication interceptor must allow Check and Watch
+explicitly when load balancers or probes call them without credentials, and
+keep List authenticated.
 
 The server listens in plaintext unless TLS is configured. Use TLS, or run
 behind a TLS-terminating proxy, for any listener reachable from an untrusted

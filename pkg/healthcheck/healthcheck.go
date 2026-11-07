@@ -9,8 +9,15 @@ It standardizes health probing around three pieces:
   - [Handler]: HTTP aggregator that runs checks concurrently and writes a
     combined result
 
+The check model and the parallel execution are provided by
+[github.com/tecnickcom/nurago/pkg/healthcheck/healthrun], which has no HTTP
+dependency: [HealthChecker], [HealthCheckFunc] and [HealthCheck] are aliases
+of its types.
+
 The default handler response is JSON and maps each check ID to either "OK" or
-the check error message.
+the check error message. [Handler.Run] returns the same per-check outcomes
+without writing a response, for non-HTTP transports such as the gRPC health
+service of github.com/tecnickcom/nurago/pkg/grpcserver.
 
 The client packages in this library expose a HealthCheck method that satisfies
 [HealthChecker] directly, so they register without an adapter:
@@ -56,36 +63,26 @@ For an implementation example, see examples/service/internal/cli/bind.go.
 package healthcheck
 
 import (
-	"context"
+	"github.com/tecnickcom/nurago/pkg/healthcheck/healthrun"
 )
 
-// HealthChecker defines a single health probe operation.
-type HealthChecker interface {
-	HealthCheck(ctx context.Context) error
-}
+// HealthChecker defines a single health probe operation. It is an alias of
+// [healthrun.HealthChecker].
+type HealthChecker = healthrun.HealthChecker
 
 // HealthCheckFunc adapts a plain function to the [HealthChecker] interface,
 // mirroring the http.HandlerFunc pattern, so a function-based probe (such as one
-// calling [CheckHTTPStatus]) can be registered without a wrapper type:
+// calling [CheckHTTPStatus]) can be registered without a wrapper type. It is an
+// alias of [healthrun.HealthCheckFunc]:
 //
 //	healthcheck.New("upstream", healthcheck.HealthCheckFunc(func(ctx context.Context) error {
 //		return healthcheck.CheckHTTPStatus(ctx, client, http.MethodGet, url, http.StatusOK, 2*time.Second)
 //	}))
-type HealthCheckFunc func(ctx context.Context) error
+type HealthCheckFunc = healthrun.HealthCheckFunc
 
-// HealthCheck calls f(ctx).
-func (f HealthCheckFunc) HealthCheck(ctx context.Context) error {
-	return f(ctx)
-}
-
-// HealthCheck describes one registered probe and its unique identifier.
-type HealthCheck struct {
-	// ID is a unique identifier for the healthcheck.
-	ID string
-
-	// Checker is the function used to perform the healthchecks.
-	Checker HealthChecker
-}
+// HealthCheck describes one registered probe and its unique identifier. It is
+// an alias of [healthrun.HealthCheck].
+type HealthCheck = healthrun.HealthCheck
 
 // New creates a HealthCheck registration entry.
 //
@@ -93,8 +90,5 @@ type HealthCheck struct {
 // execute and report results consistently. The ID should be unique and
 // non-empty within a handler, as results are aggregated by ID.
 func New(id string, checker HealthChecker) HealthCheck {
-	return HealthCheck{
-		ID:      id,
-		Checker: checker,
-	}
+	return healthrun.New(id, checker)
 }

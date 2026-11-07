@@ -76,6 +76,27 @@ func ExampleNewHandler_failure() {
 	// {"cache":"OK","database":"connection refused"}
 }
 
+func ExampleHandler_Run() {
+	checks := []healthcheck.HealthCheck{
+		healthcheck.New("database", &database{err: errors.New("connection refused")}),
+		healthcheck.New("cache", healthcheck.HealthCheckFunc(func(_ context.Context) error {
+			return nil
+		})),
+	}
+
+	handler := healthcheck.NewHandler(checks, healthcheck.WithTimeout(time.Second))
+
+	// Run reports the same outcomes as ServeHTTP without writing a response.
+	results := handler.Run(context.TODO())
+
+	fmt.Println(results["cache"])
+	fmt.Println(results["database"])
+
+	// Output:
+	// <nil>
+	// connection refused
+}
+
 func ExampleCheckHTTPStatus() {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)

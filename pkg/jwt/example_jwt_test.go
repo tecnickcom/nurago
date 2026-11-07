@@ -87,3 +87,42 @@ func Example() {
 	// protected status: 200
 	// hello alice
 }
+
+// ExampleNewContextWithClaims validates a raw token received outside an HTTP
+// Authorization header, such as gRPC metadata, and stores the claims in the
+// context for downstream handlers.
+func ExampleNewContextWithClaims() {
+	auth, err := jwt.New(
+		[]byte("0123456789abcdef0123456789abcdef"),
+		func(_, _ string) (bool, error) { return false, nil },
+	)
+	if err != nil {
+		fmt.Println(err)
+
+		return
+	}
+
+	// The identity is verified by other means; IssueToken only mints the token.
+	token, err := auth.IssueToken("alice")
+	if err != nil {
+		fmt.Println(err)
+
+		return
+	}
+
+	claims, err := auth.VerifyToken(token)
+	if err != nil {
+		fmt.Println(err)
+
+		return
+	}
+
+	ctx := jwt.NewContextWithClaims(context.Background(), claims)
+
+	got, ok := jwt.ClaimsFromContext(ctx)
+
+	fmt.Println(ok, got.Subject)
+
+	// Output:
+	// true alice
+}

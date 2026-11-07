@@ -762,6 +762,30 @@ func TestClaimsFromContextMissing(t *testing.T) {
 	require.Nil(t, claims)
 }
 
+func TestNewContextWithClaims(t *testing.T) {
+	t.Parallel()
+
+	want := &Claims{Subject: "alice"}
+
+	got, ok := ClaimsFromContext(NewContextWithClaims(t.Context(), want))
+	require.True(t, ok)
+	require.Same(t, want, got)
+}
+
+func TestNewContextWithClaimsNil(t *testing.T) {
+	t.Parallel()
+
+	claims, ok := ClaimsFromContext(NewContextWithClaims(t.Context(), nil))
+	require.False(t, ok)
+	require.Nil(t, claims)
+
+	outer := NewContextWithClaims(t.Context(), &Claims{Subject: "alice"})
+
+	claims, ok = ClaimsFromContext(NewContextWithClaims(outer, nil))
+	require.False(t, ok, "nil claims hide the outer claims")
+	require.Nil(t, claims)
+}
+
 func TestPreviousKeysRotation(t *testing.T) {
 	t.Parallel()
 

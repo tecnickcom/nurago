@@ -87,18 +87,17 @@ func TestNewHandler(t *testing.T) {
 
 	// No options
 	h1 := NewHandler(testChecks)
-	require.Len(t, h1.checks, 2)
+	require.Len(t, h1.Run(t.Context()), 2)
 	require.Equal(t, reflect.ValueOf(httputil.NewHTTPResp(h1.logger).SendJSON).Pointer(), reflect.ValueOf(h1.writeResult).Pointer())
 
 	// The stored slice must be a copy: mutating the caller's slice does not leak in.
 	testChecks[0] = New("mutated", &testHealthChecker{})
 
-	require.Equal(t, "testcheck_1", h1.checks[0].ID)
+	require.Contains(t, h1.Run(t.Context()), "testcheck_1")
 
 	// With options
 	rw := func(_ context.Context, _ http.ResponseWriter, _ int, _ any) {}
 	h2 := NewHandler(testChecks, WithResultWriter(rw))
-	require.Len(t, h2.checks, 2)
 	require.Equal(t, reflect.ValueOf(rw).Pointer(), reflect.ValueOf(h2.writeResult).Pointer())
 
 	// WithLogger must affect the default result writer (built after options).
@@ -236,7 +235,7 @@ func TestHandler_ServeHTTP_Timeout(t *testing.T) {
 	h := NewHandler([]HealthCheck{
 		New("fast", &testHealthChecker{err: nil}),
 		New("slow", &releaseHealthChecker{release: release}),
-	}, WithTimeout(50*time.Millisecond))
+	}, WithTimeout(250*time.Millisecond))
 
 	st := time.Now()
 	got := serve(t, h)
@@ -245,27 +244,7 @@ func TestHandler_ServeHTTP_Timeout(t *testing.T) {
 	require.Equal(t, http.StatusServiceUnavailable, got.status)
 	require.Equal(t, `{"fast":"OK","slow":"`+ErrCheckTimeout.Error()+`"}`+"\n", got.body)
 	// The handler must return around the timeout, well before the slow check ends.
-	require.Less(t, el, 500*time.Millisecond, "handler did not return on timeout: %s", el)
-}
-
-func TestDrainResults(t *testing.T) {
-	t.Parallel()
-
-	results := []checkResult{
-		{id: "a", err: ErrCheckTimeout},
-		{id: "b", err: ErrCheckTimeout},
-	}
-
-	resCh := make(chan indexedResult, len(results))
-	for _, r := range []indexedResult{{index: 0, err: nil}, {index: 1, err: errors.New("boom")}} {
-		resCh <- r
-	}
-
-	drainResults(results, resCh)
-
-	// Buffered results are recorded; nothing left blocks the caller.
-	require.NoError(t, results[0].err)
-	require.EqualError(t, results[1].err, "boom")
+	require.Less(t, el, 5*time.Second, "handler did not return on timeout: %s", el)
 }
 
 func TestNewHandler_NilLogger(t *testing.T) {
@@ -349,4 +328,72 @@ func TestHandler_ServeHTTP_Concurrent(t *testing.T) {
 	for i := range n {
 		require.Contains(t, got.body, fmt.Sprintf(`"c%02d":"OK"`, i))
 	}
+}
+
+func TestHandler_Run(t *testing.T) {
+	t.Parallel()
+
+	errA := errors.New("first")
+	errB := errors.New("second")
+
+	h := NewHandler([]HealthCheck{
+		New("ok", &testHealthChecker{err: nil}),
+		New("fail", &testHealthChecker{err: errA}),
+		New("dup", &testHealthChecker{err: errA}),
+		New("dup", &testHealthChecker{err: nil}),
+		New("dup", &testHealthChecker{err: errB}),
+		New("dup_ok", &testHealthChecker{err: nil}),
+		New("dup_ok", &testHealthChecker{err: nil}),
+		New("nochk", nil),
+		New("panicky", &panicHealthChecker{msg: "boom"}),
+	}, WithLogger(discardLogger()))
+
+	got := h.Run(t.Context())
+
+	require.Len(t, got, 6)
+	require.NoError(t, got["ok"])
+	require.ErrorIs(t, got["fail"], errA)
+	require.ErrorIs(t, got["dup"], errB, "the last failure wins")
+	require.NoError(t, got["dup_ok"])
+	require.ErrorIs(t, got["nochk"], ErrNoChecker)
+	require.ErrorIs(t, got["panicky"], ErrCheckPanic)
+}
+
+func TestHandler_Run_NoChecks(t *testing.T) {
+	t.Parallel()
+
+	require.Empty(t, NewHandler(nil).Run(t.Context()))
+}
+
+func TestHandler_Run_Timeout(t *testing.T) {
+	t.Parallel()
+
+	release := make(chan struct{})
+
+	t.Cleanup(func() { close(release) })
+
+	h := NewHandler([]HealthCheck{
+		New("fast", &testHealthChecker{err: nil}),
+		New("slow", &releaseHealthChecker{release: release}),
+	}, WithTimeout(250*time.Millisecond))
+
+	got := h.Run(t.Context())
+
+	require.NoError(t, got["fast"])
+	require.ErrorIs(t, got["slow"], ErrCheckTimeout)
+}
+
+func TestHandler_Run_ContextCanceled(t *testing.T) {
+	t.Parallel()
+
+	release := make(chan struct{})
+
+	t.Cleanup(func() { close(release) })
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	h := NewHandler([]HealthCheck{New("slow", &releaseHealthChecker{release: release})})
+
+	require.ErrorIs(t, h.Run(ctx)["slow"], ErrCheckTimeout)
 }

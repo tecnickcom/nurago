@@ -40,6 +40,29 @@ Every unary and streaming RPC passes through, outermost first:
   - Custom interceptors added with [WithUnaryInterceptor] and
     [WithStreamInterceptor], in the order given.
 
+# Health Service
+
+[WithHealthService] registers the standard grpc.health.v1.Health service,
+backed by github.com/tecnickcom/nurago/pkg/healthcheck/healthrun checks
+(healthcheck.HealthCheck is the same type):
+  - Check: runs the checks of the requested service. The service name ""
+    covers every check; each non-empty check ID is also a service name.
+    Unknown services are answered with codes.NotFound.
+  - List: runs every check once and reports all the services, at most 100,
+    since [WithHealthService] accepts at most 99 distinct check IDs.
+  - Watch: while a service has open streams, runs its checks once per
+    interval (see [WithHealthWatchInterval]), shared by all the streams, and
+    sends the status when it changes.
+  - Shutdown: once [GRPCServer.Shutdown] starts, every service reports
+    NOT_SERVING, and open Watch streams receive NOT_SERVING and end with
+    codes.Unavailable, so they do not delay the graceful stop.
+
+Checks run on every Check and List request and once per Watch interval of
+each watched service. Concurrent Check, List and Watch calls on the same
+service share one run. Bound them with [WithHealthCheckTimeout], and exclude
+frequently polled health methods from request logging with
+[WithoutMethodLogger] when needed.
+
 # Behavior
 
   - Lifecycle: non-blocking start, context-aware shutdown, configurable
@@ -63,6 +86,12 @@ Server reflection ([WithReflection]) lets any client list and describe every
 registered service and message type. Enable it only on internal or
 administrative listeners that are not reachable from the public internet, or
 protect it with an authentication interceptor.
+
+The health service List method returns every check ID, which can name
+internal dependencies. The health service is not exempt from the custom
+interceptors: an authentication interceptor must allow Check and Watch
+explicitly when load balancers or probes call them without credentials, and
+keep List authenticated.
 
 The server listens in plaintext unless TLS is configured. Use TLS, or run
 behind a TLS-terminating proxy, for any listener reachable from an untrusted
@@ -89,6 +118,7 @@ import (
 	"sync"
 
 	"google.golang.org/grpc"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -116,6 +146,7 @@ type GRPCServer struct {
 	cfg          *config
 	ctx          context.Context //nolint:containedctx
 	grpcServer   *grpc.Server
+	health       *healthServer // nil unless WithHealthService is set
 	listener     net.Listener
 	startedMutex sync.Mutex
 	started      bool
@@ -182,7 +213,12 @@ func New(ctx context.Context, binder Binder, opts ...Option) (*GRPCServer, error
 		slog.String("addr", listener.Addr().String()),
 	)
 
-	err = registerServices(ctx, binder, srv, cfg.reflection, cfg.logger)
+	var health *healthServer
+	if cfg.health != nil {
+		health = newHealthServer(cfg.health, cfg.logger)
+	}
+
+	err = registerServices(ctx, binder, srv, health, cfg.reflection, cfg.logger)
 	if err != nil {
 		srv.Stop()
 
@@ -195,6 +231,7 @@ func New(ctx context.Context, binder Binder, opts ...Option) (*GRPCServer, error
 			cfg:          cfg,
 			ctx:          ctx,
 			grpcServer:   srv,
+			health:       health,
 			listener:     listener,
 			shutdownDone: make(chan struct{}),
 			monitorDone:  make(chan struct{}),
@@ -305,6 +342,10 @@ func (s *GRPCServer) StartServer() {
 // is decremented exactly once, and only when the server was actually started.
 func (s *GRPCServer) Shutdown(ctx context.Context) error {
 	s.cfg.logger.Debug("shutting down grpc server")
+
+	if s.health != nil {
+		s.health.shutdown()
+	}
 
 	err := s.stop(ctx)
 
@@ -452,12 +493,13 @@ func netListener(ctx context.Context, serverAddr string) (net.Listener, error) {
 }
 
 // registerServices runs the binder against a validating registrar and, when
-// enabled, registers the reflection service. The registrar is closed before
-// it returns.
+// enabled, registers the health and reflection services. The registrar is
+// closed before it returns.
 func registerServices(
 	ctx context.Context,
 	binder Binder,
 	srv *grpc.Server,
+	health *healthServer,
 	withReflection bool,
 	logger *slog.Logger,
 ) error {
@@ -467,6 +509,10 @@ func registerServices(
 	err := binder.BindGRPC(ctx, reg)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrServiceRegistration, err)
+	}
+
+	if health != nil {
+		healthpb.RegisterHealthServer(reg, health)
 	}
 
 	if withReflection {
