@@ -421,23 +421,6 @@ func TestNewHealthServer_logging(t *testing.T) {
 	require.Len(t, sink.entries(t, "healthcheck checker panicked"), 1, "service handlers log errors")
 }
 
-func TestMinLevelHandler(t *testing.T) {
-	t.Parallel()
-
-	base, sink := newTestLogger(slog.LevelDebug)
-	logger := slog.New(&minLevelHandler{Handler: base.Handler(), level: slog.LevelError}).With("a", 1).WithGroup("g")
-
-	logger.Warn("warn")
-	logger.Error("error", "b", 2)
-
-	require.Empty(t, sink.entries(t, "warn"))
-
-	entries := sink.entries(t, "error")
-	require.Len(t, entries, 1)
-	require.InDelta(t, 1, entries[0]["a"], 0)
-	require.Equal(t, map[string]any{"b": float64(2)}, entries[0]["g"])
-}
-
 func TestHealthService_publish(t *testing.T) {
 	t.Parallel()
 

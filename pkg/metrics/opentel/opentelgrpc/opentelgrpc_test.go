@@ -173,6 +173,7 @@ func TestNew(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, in.ServerOptions(), 1)
 	require.Len(t, in.DialOptions(), 1)
+	require.False(t, in.HasServerInterceptors())
 }
 
 func TestInstrumenter_spansAndMetrics(t *testing.T) {

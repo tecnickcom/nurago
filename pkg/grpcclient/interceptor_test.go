@@ -275,7 +275,7 @@ func TestLogging_unary(t *testing.T) {
 	require.Equal(t, bufTarget, e["grpc_target"])
 	require.Equal(t, "grpc.testing.TestService", e["grpc_service"])
 	require.Equal(t, "UnaryCall", e["grpc_method"])
-	require.Equal(t, rpcTypeUnary, e["grpc_type"])
+	require.Equal(t, grpcutil.RPCTypeUnary, e["grpc_type"])
 	require.Equal(t, codes.OK.String(), e["grpc_code"])
 	require.Contains(t, e, "request_time")
 	require.Contains(t, e, "response_time")
@@ -435,7 +435,7 @@ func TestLogging_streams(t *testing.T) {
 		require.ErrorIs(t, err, io.EOF)
 
 		e := sink.waitEntry(t)
-		require.Equal(t, rpcTypeServerStream, e["grpc_type"])
+		require.Equal(t, grpcutil.RPCTypeServerStream, e["grpc_type"])
 		require.Equal(t, codes.OK.String(), e["grpc_code"])
 		require.InDelta(t, 1, e["request_messages"], 0)
 		require.InDelta(t, 3, e["response_messages"], 0)
@@ -481,7 +481,7 @@ func TestLogging_streams(t *testing.T) {
 		require.EqualValues(t, 4, resp.GetAggregatedPayloadSize())
 
 		e := sink.waitEntry(t)
-		require.Equal(t, rpcTypeClientStream, e["grpc_type"])
+		require.Equal(t, grpcutil.RPCTypeClientStream, e["grpc_type"])
 		require.Equal(t, codes.OK.String(), e["grpc_code"])
 		require.InDelta(t, 4, e["request_messages"], 0)
 		require.InDelta(t, 1, e["response_messages"], 0)
@@ -508,7 +508,7 @@ func TestLogging_streams(t *testing.T) {
 		require.ErrorIs(t, err, io.EOF)
 
 		e := sink.waitEntry(t)
-		require.Equal(t, rpcTypeBidiStream, e["grpc_type"])
+		require.Equal(t, grpcutil.RPCTypeBidiStream, e["grpc_type"])
 		require.InDelta(t, 2, e["request_messages"], 0)
 		require.InDelta(t, 2, e["response_messages"], 0)
 	})
@@ -577,7 +577,7 @@ func TestLogAttrs_nilConn(t *testing.T) {
 
 	cfg := defaultConfig()
 
-	attrs := cfg.logAttrs(t.Context(), nil, "bad", rpcTypeUnary, time.Now(), errors.New("plain"))
+	attrs := cfg.logAttrs(t.Context(), nil, "bad", grpcutil.RPCTypeUnary, time.Now(), errors.New("plain"))
 
 	got := make(map[string]string, len(attrs))
 	for _, a := range attrs {
@@ -589,12 +589,4 @@ func TestLogAttrs_nilConn(t *testing.T) {
 	require.Equal(t, "bad", got["grpc_method"])
 	require.Equal(t, codes.Unknown.String(), got["grpc_code"])
 	require.Equal(t, "plain", got["error"])
-}
-
-func TestStreamType(t *testing.T) {
-	t.Parallel()
-
-	require.Equal(t, rpcTypeBidiStream, streamType(&grpc.StreamDesc{ClientStreams: true, ServerStreams: true}))
-	require.Equal(t, rpcTypeClientStream, streamType(&grpc.StreamDesc{ClientStreams: true}))
-	require.Equal(t, rpcTypeServerStream, streamType(&grpc.StreamDesc{ServerStreams: true}))
 }

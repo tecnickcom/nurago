@@ -15,14 +15,6 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// RPC type values logged in the grpc_type field.
-const (
-	rpcTypeUnary        = "unary"
-	rpcTypeClientStream = "client_stream"
-	rpcTypeServerStream = "server_stream"
-	rpcTypeBidiStream   = "bidi_stream"
-)
-
 // logMessage is the message of the per-RPC log entry. It does not depend on
 // the log field prefix.
 const logMessage = "outbound"
@@ -118,7 +110,7 @@ func (c *config) unaryLogInterceptor(
 
 	err := invoker(ctx, method, req, reply, cc, opts...)
 
-	attrs := c.logAttrs(ctx, cc, method, rpcTypeUnary, start, err)
+	attrs := c.logAttrs(ctx, cc, method, grpcutil.RPCTypeUnary, start, err)
 
 	if dbglog {
 		attrs = append(attrs, slog.String(c.logPrefix+"request", reqDump))
@@ -148,7 +140,7 @@ func (c *config) streamLogInterceptor(
 		ctx:           ctx,
 		cc:            cc,
 		method:        method,
-		rpcType:       streamType(desc),
+		rpcType:       grpcutil.StreamType(desc.ClientStreams, desc.ServerStreams),
 		serverStreams: desc.ServerStreams,
 		start:         time.Now(),
 	}
@@ -276,16 +268,4 @@ func (c *config) logRPC(ctx context.Context, err error, dbglog bool, attrs []slo
 	}
 
 	c.logger.LogAttrs(ctx, level, logMessage, attrs...)
-}
-
-// streamType returns the grpc_type value for a streaming RPC.
-func streamType(desc *grpc.StreamDesc) string {
-	switch {
-	case desc.ClientStreams && desc.ServerStreams:
-		return rpcTypeBidiStream
-	case desc.ClientStreams:
-		return rpcTypeClientStream
-	default:
-		return rpcTypeServerStream
-	}
 }

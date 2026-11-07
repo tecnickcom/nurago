@@ -9,7 +9,8 @@ go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc:
     grpc.WithStatsHandler option with the otelgrpc client handler. They
     satisfy the grpcutil.ServerInstrumenter and grpcutil.ClientInstrumenter
     interfaces, so an Instrumenter is passed to grpcserver.WithInstrumenter
-    and grpcclient.WithInstrumenter.
+    and grpcclient.WithInstrumenter. It also implements
+    grpcutil.ServerInterceptorReporter, as it adds no interceptors.
   - The handlers create a span for every RPC, propagate the trace context
     through the request metadata, and record the rpc.server.* and
     rpc.client.* metrics defined by the OpenTelemetry semantic conventions.
@@ -83,6 +84,12 @@ func New(opts ...Option) (*Instrumenter, error) {
 // handler.
 func (i *Instrumenter) ServerOptions() []grpc.ServerOption {
 	return []grpc.ServerOption{grpc.StatsHandler(i.serverHandler)}
+}
+
+// HasServerInterceptors returns false: ServerOptions adds only a stats
+// handler. It implements grpcutil.ServerInterceptorReporter.
+func (i *Instrumenter) HasServerInterceptors() bool {
+	return false
 }
 
 // DialOptions returns the dial option that adds the otelgrpc client stats

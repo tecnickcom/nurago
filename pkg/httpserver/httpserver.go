@@ -133,6 +133,11 @@ func New(ctx context.Context, binder Binder, opts ...Option) (*HTTPServer, error
 		}
 	}
 
+	err := srvlifecycle.ValidateOptions(cfg.lifecycleOpts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed creating the http server lifecycle: %w", err)
+	}
+
 	cfg.logger = cfg.logger.With(
 		slog.String("component", "httpserver"),
 		slog.String("addr", cfg.serverAddr),
@@ -141,6 +146,11 @@ func New(ctx context.Context, binder Binder, opts ...Option) (*HTTPServer, error
 	cfg.httpresp = httputil.NewHTTPResp(cfg.logger)
 
 	cfg.setRouter()
+
+	err = loadRoutes(ctx, binder, cfg)
+	if err != nil {
+		return nil, err
+	}
 
 	listener, err := netListener(ctx, cfg.serverAddr, cfg.tlsConfig)
 	if err != nil {
@@ -186,15 +196,6 @@ func New(ctx context.Context, binder Binder, opts ...Option) (*HTTPServer, error
 		_ = listener.Close()
 
 		return nil, fmt.Errorf("failed creating the http server lifecycle: %w", err)
-	}
-
-	// The server holds the router, so the routes loaded here are served.
-	err = loadRoutes(ctx, binder, cfg)
-	if err != nil {
-		// Closes the listener of the never-started server.
-		_ = h.lc.Shutdown(ctx)
-
-		return nil, err
 	}
 
 	return h, nil

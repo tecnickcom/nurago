@@ -9,6 +9,14 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+func TestStreamType(t *testing.T) {
+	t.Parallel()
+
+	require.Equal(t, RPCTypeBidiStream, StreamType(true, true))
+	require.Equal(t, RPCTypeClientStream, StreamType(true, false))
+	require.Equal(t, RPCTypeServerStream, StreamType(false, true))
+}
+
 func TestSplitFullMethod(t *testing.T) {
 	t.Parallel()
 

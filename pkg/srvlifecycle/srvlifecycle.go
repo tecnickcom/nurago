@@ -26,7 +26,9 @@ the same lifecycle and can share their shutdown wait group and signal channel.
   - Serve failures: any error returned by Serve that does not denote a normal
     shutdown (see [WithServerClosedFunc]) is published on
     [Lifecycle.ServeError] and triggers the shutdown, so the application is not
-    left waiting on a server that has stopped.
+    left waiting on a server that has stopped. A Serve that returns normally
+    before any Shutdown call also triggers the shutdown, without publishing an
+    error.
 
 # When To Use
 
@@ -43,6 +45,7 @@ import (
 	"log/slog"
 	"net"
 	"sync"
+	"sync/atomic"
 )
 
 var (
@@ -77,6 +80,7 @@ type Lifecycle struct {
 	started      bool
 	stopped      bool // set once Shutdown has run, guarding against a late Start.
 	shutdownOnce sync.Once
+	shutdownCall atomic.Bool // set when Shutdown is first called
 	shutdownDone chan struct{}
 	serveErr     chan error // buffered (size 1); receives an abnormal Serve failure
 }
@@ -93,17 +97,9 @@ func New(srv Server, l net.Listener, opts ...Option) (*Lifecycle, error) {
 		return nil, ErrNilListener
 	}
 
-	cfg := defaultConfig()
-
-	for _, applyOpt := range opts {
-		if applyOpt == nil {
-			return nil, errors.New("option is required")
-		}
-
-		err := applyOpt(cfg)
-		if err != nil {
-			return nil, err
-		}
+	cfg, err := newConfig(opts)
+	if err != nil {
+		return nil, err
 	}
 
 	return &Lifecycle{
@@ -200,6 +196,10 @@ func (l *Lifecycle) Start(ctx context.Context) {
 func (l *Lifecycle) Shutdown(ctx context.Context) error {
 	l.cfg.logger.Debug("shutting down " + l.cfg.name + " server")
 
+	// Set before Server.Shutdown, so serve can tell a requested stop from a
+	// server that stopped on its own.
+	l.shutdownCall.Store(true)
+
 	err := l.srv.Shutdown(ctx)
 
 	l.shutdownOnce.Do(func() {
@@ -243,21 +243,27 @@ func (l *Lifecycle) release() {
 }
 
 // serve runs Serve. On any failure other than a normal shutdown it publishes
-// the error on the ServeError channel and runs Shutdown, so the wait group is
+// the error on the ServeError channel. On such a failure, and on a normal
+// return before any Shutdown call, it runs Shutdown, so the wait group is
 // released and the application is not left waiting on a dead server.
 func (l *Lifecycle) serve() {
 	err := l.srv.Serve(l.listener)
-	if err == nil || l.cfg.serverClosedFn(err) {
+
+	switch {
+	case err != nil && !l.cfg.serverClosedFn(err):
+		l.cfg.logger.With(slog.Any("error", err)).Error("unexpected " + l.cfg.name + " server failure")
+
+		// Non-blocking publish of the failure (buffer size 1, never overwritten).
+		select {
+		case l.serveErr <- err:
+		default:
+		}
+	case l.shutdownCall.Load():
 		l.cfg.logger.Debug("closed " + l.cfg.name + " server")
+
 		return
-	}
-
-	l.cfg.logger.With(slog.Any("error", err)).Error("unexpected " + l.cfg.name + " server failure")
-
-	// Non-blocking publish of the failure (buffer size 1, never overwritten).
-	select {
-	case l.serveErr <- err:
 	default:
+		l.cfg.logger.Warn(l.cfg.name + " server stopped without a shutdown request")
 	}
 
 	// Ensure the wait group is released and the monitor goroutine unblocked.

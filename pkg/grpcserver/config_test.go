@@ -94,38 +94,6 @@ func TestMethodTimeout(t *testing.T) {
 	require.Equal(t, time.Hour, cfg.methodTimeout(methodFullDuplexCall, time.Hour))
 }
 
-func TestValidateAddr(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		addr    string
-		wantErr bool
-	}{
-		{addr: ":8019"},
-		{addr: ":0"},
-		{addr: "localhost:8019"},
-		{addr: "0.0.0.0:8019"},
-		{addr: "[::1]:8019"},
-		{addr: ":65535"},
-		{addr: "", wantErr: true},
-		{addr: "::", wantErr: true},
-		{addr: "localhost", wantErr: true},
-		{addr: ":port", wantErr: true},
-		{addr: ":-1", wantErr: true},
-		{addr: ":65536", wantErr: true},
-	}
-
-	for _, tt := range tests {
-		err := validateAddr(tt.addr)
-		if tt.wantErr {
-			require.Error(t, err, tt.addr)
-			continue
-		}
-
-		require.NoError(t, err, tt.addr)
-	}
-}
-
 func TestValidateFullMethod(t *testing.T) {
 	t.Parallel()
 

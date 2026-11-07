@@ -71,3 +71,12 @@ func TestWithServerClosedFunc(t *testing.T) {
 	require.NoError(t, WithServerClosedFunc(func(error) bool { return true })(cfg))
 	require.True(t, cfg.serverClosedFn(errClosed))
 }
+
+func TestValidateOptions(t *testing.T) {
+	t.Parallel()
+
+	require.NoError(t, ValidateOptions())
+	require.NoError(t, ValidateOptions(WithName("tcp"), WithShutdownTimeout(time.Second)))
+	require.Error(t, ValidateOptions(WithShutdownTimeout(0)))
+	require.Error(t, ValidateOptions(WithName("tcp"), nil))
+}

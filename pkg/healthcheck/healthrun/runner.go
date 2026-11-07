@@ -13,14 +13,16 @@ import (
 // in-flight goroutines is (concurrent runs × checks); keep the check set
 // bounded and the checks reasonably fast.
 type Runner struct {
-	checks  []HealthCheck
-	logger  *slog.Logger
-	timeout time.Duration
+	checks          []HealthCheck
+	logger          *slog.Logger
+	timeout         time.Duration
+	noCheckWarnings bool
 }
 
 // NewRunner builds a [Runner] for checks. The provided slice is copied, so
 // later caller mutations do not affect the runner. Misconfigured checks (empty
-// or duplicate IDs, nil checkers) are logged as warnings.
+// or duplicate IDs, nil checkers) are logged as warnings, unless
+// [WithoutCheckWarnings] is set.
 func NewRunner(checks []HealthCheck, opts ...Option) *Runner {
 	r := &Runner{
 		checks: append([]HealthCheck(nil), checks...),
@@ -37,7 +39,9 @@ func NewRunner(checks []HealthCheck, opts ...Option) *Runner {
 		r.logger = slog.Default()
 	}
 
-	warnInvalidChecks(r.logger, r.checks)
+	if !r.noCheckWarnings {
+		warnInvalidChecks(r.logger, r.checks)
+	}
 
 	return r
 }

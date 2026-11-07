@@ -15,14 +15,6 @@ import (
 	"google.golang.org/grpc/tap"
 )
 
-// RPC type values logged in the grpc_type field.
-const (
-	rpcTypeUnary        = "unary"
-	rpcTypeClientStream = "client_stream"
-	rpcTypeServerStream = "server_stream"
-	rpcTypeBidiStream   = "bidi_stream"
-)
-
 // logMessage is the message of the per-RPC log entry.
 const logMessage = "request"
 
@@ -154,7 +146,7 @@ func (c *config) unaryRequestInterceptor(
 		return handler(ctx, req)
 	}
 
-	attrs := c.requestAttrs(ctx, reqID, reqTime, info.FullMethod, rpcTypeUnary)
+	attrs := c.requestAttrs(ctx, reqID, reqTime, info.FullMethod, grpcutil.RPCTypeUnary)
 
 	dbglog := c.logger.Enabled(ctx, slog.LevelDebug)
 	if dbglog {
@@ -211,7 +203,7 @@ func (c *config) streamRequestInterceptor(
 
 	dbglog := c.logger.Enabled(ctx, slog.LevelDebug)
 
-	attrs := c.requestAttrs(ctx, reqID, reqTime, info.FullMethod, streamType(info))
+	attrs := c.requestAttrs(ctx, reqID, reqTime, info.FullMethod, grpcutil.StreamType(info.IsClientStream, info.IsServerStream))
 	attrs = append(attrs, c.responseAttrs(reqTime, err, dbglog)...)
 	attrs = append(attrs,
 		slog.Int64("request_messages", cs.recv.Load()),
@@ -419,18 +411,6 @@ func (c *config) logRequest(ctx context.Context, dbglog bool, attrs []slog.Attr)
 	}
 
 	c.logger.LogAttrs(ctx, level, logMessage, attrs...)
-}
-
-// streamType returns the grpc_type value for a streaming RPC.
-func streamType(info *grpc.StreamServerInfo) string {
-	switch {
-	case info.IsClientStream && info.IsServerStream:
-		return rpcTypeBidiStream
-	case info.IsClientStream:
-		return rpcTypeClientStream
-	default:
-		return rpcTypeServerStream
-	}
 }
 
 // peerAddr returns the remote address of the RPC peer, or an empty string.

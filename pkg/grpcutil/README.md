@@ -52,7 +52,8 @@ the InstrumentHandler and InstrumentRoundTripper methods of
 `github.com/tecnickcom/nurago/pkg/metrics.Client`. They supply the server or
 dial options that add metrics or tracing to a server or client. A server
 instrumenter that also implements `ServerInitializer` is given the server
-once every service is registered.
+once every service is registered. One that implements
+`ServerInterceptorReporter` reports whether its options add interceptors.
 
 The grpcserver and grpcclient packages accept them with their WithInstrumenter
 options. The metrics/prometheus/prometheusgrpc and metrics/opentel/opentelgrpc

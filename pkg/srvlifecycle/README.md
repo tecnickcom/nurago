@@ -31,7 +31,9 @@ the same lifecycle and can share their shutdown wait group and signal channel.
   - Serve failures: any error returned by Serve that does not denote a normal
     shutdown (see `WithServerClosedFunc`) is published on
     `Lifecycle.ServeError` and triggers the shutdown, so the application is not
-    left waiting on a server that has stopped.
+    left waiting on a server that has stopped. A Serve that returns normally
+    before any Shutdown call also triggers the shutdown, without publishing an
+    error.
 
 ## When To Use
 

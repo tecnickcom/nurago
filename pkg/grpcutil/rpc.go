@@ -8,6 +8,27 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// RPC type values logged in the grpc_type field.
+const (
+	RPCTypeUnary        = "unary"
+	RPCTypeClientStream = "client_stream"
+	RPCTypeServerStream = "server_stream"
+	RPCTypeBidiStream   = "bidi_stream"
+)
+
+// StreamType returns the RPC type of a streaming RPC from its stream
+// directions.
+func StreamType(clientStream, serverStream bool) string {
+	switch {
+	case clientStream && serverStream:
+		return RPCTypeBidiStream
+	case clientStream:
+		return RPCTypeClientStream
+	default:
+		return RPCTypeServerStream
+	}
+}
+
 // RedactFn redacts sensitive values from logged byte payloads and returns a redacted string.
 type RedactFn func(b []byte) string
 

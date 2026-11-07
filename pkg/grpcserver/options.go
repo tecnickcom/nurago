@@ -23,9 +23,8 @@ type Option func(*config) error
 // WithServerAddr sets the address the server will bind to.
 func WithServerAddr(addr string) Option {
 	return func(cfg *config) error {
-		err := validateAddr(addr)
-		if err != nil {
-			return err
+		if !srvlifecycle.IsValidAddr(addr) {
+			return fmt.Errorf("invalid grpc server address: %s", addr)
 		}
 
 		cfg.serverAddr = addr

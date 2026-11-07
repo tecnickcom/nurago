@@ -33,6 +33,32 @@ func defaultConfig() *config {
 	}
 }
 
+// newConfig returns the default configuration with opts applied.
+func newConfig(opts []Option) (*config, error) {
+	cfg := defaultConfig()
+
+	for _, applyOpt := range opts {
+		if applyOpt == nil {
+			return nil, errors.New("option is required")
+		}
+
+		err := applyOpt(cfg)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return cfg, nil
+}
+
+// ValidateOptions returns the error that [New] would return for opts. It lets
+// a caller reject invalid options before binding the listener.
+func ValidateOptions(opts ...Option) error {
+	_, err := newConfig(opts)
+
+	return err
+}
+
 // isHTTPServerClosed reports whether err is http.ErrServerClosed.
 func isHTTPServerClosed(err error) bool {
 	return errors.Is(err, http.ErrServerClosed)

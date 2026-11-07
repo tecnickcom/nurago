@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -27,4 +28,13 @@ func TestWithLogger(t *testing.T) {
 	v := slog.Default()
 	WithLogger(v)(h)
 	require.Equal(t, v, h.logger)
+}
+
+func TestWithTimeout(t *testing.T) {
+	t.Parallel()
+
+	h := &Handler{}
+
+	WithTimeout(time.Second)(h)
+	require.Len(t, h.runnerOpts, 1)
 }

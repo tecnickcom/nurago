@@ -110,7 +110,8 @@ func (h *GRPCHandler) DeleteItem(ctx context.Context, req *itemv1.DeleteItemRequ
 	return &itemv1.DeleteItemResponse{}, nil
 }
 
-// itemError maps the item sentinel errors to gRPC status errors.
+// itemError maps the item sentinel errors and the context errors to gRPC status
+// errors.
 //
 // The status message is the sentinel text, without the wrapped details. Any
 // other error is logged and answered with codes.Internal and a generic message.
@@ -124,6 +125,10 @@ func (h *GRPCHandler) itemError(ctx context.Context, err error) error {
 		code, err = codes.AlreadyExists, item.ErrConflict
 	case errors.Is(err, item.ErrValidation):
 		code, err = codes.InvalidArgument, item.ErrValidation
+	case errors.Is(err, context.Canceled):
+		code, err = codes.Canceled, context.Canceled
+	case errors.Is(err, context.DeadlineExceeded):
+		code, err = codes.DeadlineExceeded, context.DeadlineExceeded
 	default:
 		h.logger.With(slog.Any("error", err)).ErrorContext(ctx, "item request failed")
 		code, err = codes.Internal, errInternal

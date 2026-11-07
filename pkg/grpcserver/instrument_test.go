@@ -19,6 +19,8 @@ import (
 var (
 	_ grpcutil.ServerInstrumenter = (*testInstrumenter)(nil)
 	_ grpcutil.ServerInitializer  = (*testInstrumenter)(nil)
+
+	_ grpcutil.ServerInterceptorReporter = reportedStatsInstrumenter{}
 )
 
 // instrumentedRPC is what a testInstrumenter interceptor observed.
@@ -92,6 +94,14 @@ type statsOnlyInstrumenter struct{}
 func (statsOnlyInstrumenter) ServerOptions() []grpc.ServerOption {
 	return []grpc.ServerOption{grpc.MaxConcurrentStreams(100)}
 }
+
+// reportedStatsInstrumenter is a statsOnlyInstrumenter that reports it adds
+// no interceptors.
+type reportedStatsInstrumenter struct {
+	statsOnlyInstrumenter
+}
+
+func (reportedStatsInstrumenter) HasServerInterceptors() bool { return false }
 
 func TestWithInstrumenter_interceptorPosition(t *testing.T) {
 	t.Parallel()

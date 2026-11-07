@@ -46,9 +46,9 @@ Every unary and streaming RPC passes through, outermost first:
     `WithStreamInterceptor`, in the order given.
 
 The interceptors of the instrumenters added with `WithInstrumenter` run
-between the request logger and the panic recovery. When instrumenters are
-set, a second panic recovery runs between the request logger and their
-interceptors, so a panic they raise is answered and logged like a handler
+between the request logger and the panic recovery. When instrumenters add
+interceptors, a second panic recovery runs between the request logger and
+their interceptors, so a panic they raise is answered and logged like a handler
 panic.
 
 ## Instrumentation

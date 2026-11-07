@@ -31,3 +31,12 @@ func WithTimeout(timeout time.Duration) Option {
 		r.timeout = timeout
 	}
 }
+
+// WithoutCheckWarnings disables the construction warnings for misconfigured
+// checks, for example when the same checks are already validated by another
+// runner.
+func WithoutCheckWarnings() Option {
+	return func(r *Runner) {
+		r.noCheckWarnings = true
+	}
+}

@@ -315,17 +315,52 @@ func TestServe_nilError(t *testing.T) {
 
 	ts.lc.Start(t.Context())
 
-	require.Eventually(t, func() bool {
-		return strings.Contains(ts.logs.String(), "closed test server")
-	}, 5*time.Second, time.Millisecond)
+	waitClosed(t, ts.lc.Done(), "a nil Serve result did not trigger the shutdown")
+	waitGroup(t, ts.wg)
+	require.Contains(t, ts.logs.String(), "test server stopped without a shutdown request")
+	require.Equal(t, int32(1), ts.srv.stopCalls.Load())
 
 	select {
 	case err := <-ts.lc.ServeError():
 		require.Fail(t, "a nil Serve result is not published", err)
 	default:
 	}
+}
 
+func TestServe_closedWithoutShutdown(t *testing.T) {
+	t.Parallel()
+
+	srv := newFakeServer()
+	srv.serveErr = errClosed
+
+	ts := newTestSetup(srv)
+
+	ts.lc.Start(t.Context())
+
+	waitClosed(t, ts.lc.Done(), "a self-stopped server did not trigger the shutdown")
+	waitGroup(t, ts.wg)
+	require.Contains(t, ts.logs.String(), "test server stopped without a shutdown request")
+
+	select {
+	case err := <-ts.lc.ServeError():
+		require.Fail(t, "a normal Serve result is not published", err)
+	default:
+	}
+}
+
+func TestServe_closedByShutdown(t *testing.T) {
+	t.Parallel()
+
+	ts := newTestSetup(newFakeServer())
+
+	ts.lc.Start(t.Context())
 	require.NoError(t, ts.lc.Shutdown(t.Context()))
+
+	require.Eventually(t, func() bool {
+		return strings.Contains(ts.logs.String(), "closed test server")
+	}, 5*time.Second, time.Millisecond)
+
+	require.NotContains(t, ts.logs.String(), "stopped without a shutdown request")
 }
 
 func TestServe_failure(t *testing.T) {

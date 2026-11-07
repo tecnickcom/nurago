@@ -212,7 +212,7 @@ func TestRequestLogger_unary(t *testing.T) {
 	require.Equal(t, "log-id", e[traceid.DefaultLogKey])
 	require.Equal(t, "grpc.testing.TestService", e["grpc_service"])
 	require.Equal(t, "UnaryCall", e["grpc_method"])
-	require.Equal(t, rpcTypeUnary, e["grpc_type"])
+	require.Equal(t, grpcutil.RPCTypeUnary, e["grpc_type"])
 	require.Equal(t, codes.OK.String(), e["grpc_code"])
 	require.True(t, strings.HasSuffix(e["request_time"].(string), "Z"), "request_time is logged in UTC") //nolint:forcetypeassert
 	require.NotEmpty(t, e["response_duration"])
@@ -320,9 +320,9 @@ func TestRequestLogger_streams(t *testing.T) {
 		sent     float64
 		wantCode codes.Code
 	}{
-		{method: "StreamingOutputCall", rpcType: rpcTypeServerStream, recv: 1, sent: 3},
-		{method: "StreamingInputCall", rpcType: rpcTypeClientStream, recv: 2, sent: 1},
-		{method: "FullDuplexCall", rpcType: rpcTypeBidiStream, recv: 2, sent: 2},
+		{method: "StreamingOutputCall", rpcType: grpcutil.RPCTypeServerStream, recv: 1, sent: 3},
+		{method: "StreamingInputCall", rpcType: grpcutil.RPCTypeClientStream, recv: 2, sent: 1},
+		{method: "FullDuplexCall", rpcType: grpcutil.RPCTypeBidiStream, recv: 2, sent: 2},
 	}
 
 	for _, tt := range tests {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/tecnickcom/nurago/pkg/healthcheck/healthrun"
 	"github.com/tecnickcom/nurago/pkg/httputil"
@@ -44,9 +43,9 @@ type ResultWriter func(ctx context.Context, w http.ResponseWriter, statusCode in
 // reasonably fast, and avoid probing this endpoint at extreme frequency.
 type Handler struct {
 	runner      *healthrun.Runner
+	runnerOpts  []healthrun.Option // set by the options, used once by NewHandler
 	writeResult ResultWriter
 	logger      *slog.Logger
-	timeout     time.Duration
 }
 
 // NewHandler builds an HTTP healthcheck aggregator handler.
@@ -75,10 +74,8 @@ func NewHandler(checks []HealthCheck, opts ...HandlerOption) *Handler {
 		h.writeResult = httputil.NewHTTPResp(h.logger).SendJSON
 	}
 
-	h.runner = healthrun.NewRunner(checks,
-		healthrun.WithLogger(h.logger),
-		healthrun.WithTimeout(h.timeout),
-	)
+	h.runner = healthrun.NewRunner(checks, append(h.runnerOpts, healthrun.WithLogger(h.logger))...)
+	h.runnerOpts = nil
 
 	return h
 }

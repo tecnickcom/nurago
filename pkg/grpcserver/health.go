@@ -118,21 +118,21 @@ func newHealthServer(cfg *healthConfig, logger *slog.Logger) *healthServer {
 		}
 	}
 
-	groupLogger := slog.New(&minLevelHandler{Handler: logger.Handler(), level: slog.LevelError})
 	services := make(map[string]*healthService, len(groups))
 
 	for id, checks := range groups {
-		l := groupLogger
-		if id == "" {
-			l = logger
+		opts := []healthrun.Option{
+			healthrun.WithLogger(logger),
+			healthrun.WithTimeout(cfg.timeout),
+		}
+
+		if id != "" {
+			opts = append(opts, healthrun.WithoutCheckWarnings())
 		}
 
 		services[id] = &healthService{
-			checks: healthrun.NewRunner(checks,
-				healthrun.WithLogger(l),
-				healthrun.WithTimeout(cfg.timeout),
-			),
-			subs: make(map[chan healthpb.HealthCheckResponse_ServingStatus]struct{}),
+			checks: healthrun.NewRunner(checks, opts...),
+			subs:   make(map[chan healthpb.HealthCheckResponse_ServingStatus]struct{}),
 		}
 	}
 
@@ -156,28 +156,6 @@ func healthServiceCount(checks []healthrun.HealthCheck) int {
 	}
 
 	return len(ids)
-}
-
-// minLevelHandler passes to the wrapped handler only the records at or above
-// level.
-type minLevelHandler struct {
-	slog.Handler
-
-	level slog.Level
-}
-
-// Enabled reports whether l is at or above the minimum level and enabled in the
-// wrapped handler.
-func (h *minLevelHandler) Enabled(ctx context.Context, l slog.Level) bool {
-	return l >= h.level && h.Handler.Enabled(ctx, l)
-}
-
-func (h *minLevelHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	return &minLevelHandler{Handler: h.Handler.WithAttrs(attrs), level: h.level}
-}
-
-func (h *minLevelHandler) WithGroup(name string) slog.Handler {
-	return &minLevelHandler{Handler: h.Handler.WithGroup(name), level: h.level}
 }
 
 // Check reports the status of the requested service. An unknown service is

@@ -3,6 +3,8 @@ package healthcheck
 import (
 	"log/slog"
 	"time"
+
+	"github.com/tecnickcom/nurago/pkg/healthcheck/healthrun"
 )
 
 // HandlerOption configures a [Handler] instance.
@@ -37,6 +39,6 @@ func WithLogger(logger *slog.Logger) HandlerOption {
 // own goroutine; the timeout bounds the response latency, not the checker itself.
 func WithTimeout(timeout time.Duration) HandlerOption {
 	return func(h *Handler) {
-		h.timeout = timeout
+		h.runnerOpts = append(h.runnerOpts, healthrun.WithTimeout(timeout))
 	}
 }

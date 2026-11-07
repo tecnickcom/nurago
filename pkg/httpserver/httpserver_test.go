@@ -156,6 +156,9 @@ func TestStartServer(t *testing.T) {
 			opts: []Option{
 				WithShutdownTimeout(1 * time.Millisecond),
 			},
+			setupBinder: func(b *MockBinder) {
+				b.EXPECT().BindHTTP(gomock.Any()).Times(1)
+			},
 			failListen: true,
 			wantErr:    true,
 		},
@@ -365,19 +368,18 @@ func TestNew_lifecycleError(t *testing.T) {
 
 			var lc net.ListenConfig
 
-			l, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
+			// The address stays bound: the options must be rejected before
+			// New tries to listen on it.
+			busy, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
 			require.NoError(t, err)
 
-			addr := l.Addr().String()
-			require.NoError(t, l.Close())
+			t.Cleanup(func() { _ = busy.Close() })
+
+			addr := busy.Addr().String()
 
 			h, err := New(t.Context(), unexpectedBinder{t: t}, WithServerAddr(addr), tt.opt)
 			require.ErrorContains(t, err, "failed creating the http server lifecycle")
 			require.Nil(t, h)
-
-			l, err = lc.Listen(t.Context(), "tcp", addr)
-			require.NoError(t, err, "the listener must be released")
-			require.NoError(t, l.Close())
 		})
 	}
 }

@@ -206,6 +206,18 @@ func TestGRPCHandler_errors(t *testing.T) {
 			wantMsg:  item.ErrValidation.Error(),
 		},
 		{
+			name:     "canceled",
+			err:      fmt.Errorf("list items: %w", context.Canceled),
+			wantCode: codes.Canceled,
+			wantMsg:  context.Canceled.Error(),
+		},
+		{
+			name:     "deadline exceeded",
+			err:      fmt.Errorf("list items: %w", context.DeadlineExceeded),
+			wantCode: codes.DeadlineExceeded,
+			wantMsg:  context.DeadlineExceeded.Error(),
+		},
+		{
 			name:     "internal",
 			err:      errTest,
 			wantCode: codes.Internal,

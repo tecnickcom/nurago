@@ -26,3 +26,12 @@ func TestWithTimeout(t *testing.T) {
 	WithTimeout(time.Second)(r)
 	require.Equal(t, time.Second, r.timeout)
 }
+
+func TestWithoutCheckWarnings(t *testing.T) {
+	t.Parallel()
+
+	r := &Runner{}
+
+	WithoutCheckWarnings()(r)
+	require.True(t, r.noCheckWarnings)
+}

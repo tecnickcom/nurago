@@ -77,6 +77,20 @@ func TestNewRunner_WarnsInvalidChecks(t *testing.T) {
 	require.Contains(t, out, "nil checker")
 }
 
+func TestNewRunner_WithoutCheckWarnings(t *testing.T) {
+	t.Parallel()
+
+	logger, buf := newTestLogger()
+
+	NewRunner([]HealthCheck{
+		New("dup", &testChecker{}),
+		New("dup", &testChecker{}),
+		New("nochk", nil),
+	}, WithLogger(logger), WithoutCheckWarnings())
+
+	require.Empty(t, buf.String())
+}
+
 func TestRunner_Run(t *testing.T) {
 	t.Parallel()
 

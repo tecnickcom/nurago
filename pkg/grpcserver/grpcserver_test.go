@@ -61,6 +61,14 @@ func TestNew_optionError(t *testing.T) {
 	require.Nil(t, s)
 }
 
+func TestNew_nilOption(t *testing.T) {
+	t.Parallel()
+
+	s, err := New(t.Context(), NopBinder(), WithServerAddr("127.0.0.1:0"), nil)
+	require.ErrorContains(t, err, "option is required")
+	require.Nil(t, s)
+}
+
 func TestNew_invalidTLSConfig(t *testing.T) {
 	t.Parallel()
 
@@ -130,19 +138,18 @@ func TestNew_lifecycleError(t *testing.T) {
 
 			var lc net.ListenConfig
 
-			l, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
+			// The address stays bound: the options must be rejected before
+			// New tries to listen on it.
+			busy, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
 			require.NoError(t, err)
 
-			addr := l.Addr().String()
-			require.NoError(t, l.Close())
+			t.Cleanup(func() { _ = busy.Close() })
+
+			addr := busy.Addr().String()
 
 			s, err := New(t.Context(), unexpectedBinder{t: t}, WithServerAddr(addr), WithLogger(discardLogger()), tt.opt)
 			require.ErrorContains(t, err, "failed creating the grpc server lifecycle")
 			require.Nil(t, s)
-
-			l, err = lc.Listen(t.Context(), "tcp", addr)
-			require.NoError(t, err, "the listener must be released")
-			require.NoError(t, l.Close())
 		})
 	}
 }

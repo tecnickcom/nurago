@@ -6,9 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"math"
-	"net"
-	"strconv"
 	"time"
 
 	"github.com/tecnickcom/nurago/pkg/grpcutil"
@@ -85,6 +82,31 @@ func defaultConfig() *config {
 	}
 }
 
+// newConfig returns the default configuration with opts applied. It also
+// validates the shutdown options, so they are rejected before the listener is
+// bound.
+func newConfig(opts []Option) (*config, error) {
+	cfg := defaultConfig()
+
+	for _, applyOpt := range opts {
+		if applyOpt == nil {
+			return nil, errors.New("option is required")
+		}
+
+		err := applyOpt(cfg)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	err := srvlifecycle.ValidateOptions(cfg.lifecycleOpts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed creating the grpc server lifecycle: %w", err)
+	}
+
+	return cfg, nil
+}
+
 // defaultPanicHandler answers a recovered panic with codes.Internal.
 func defaultPanicHandler(_ context.Context, _ any) error {
 	return status.Error(codes.Internal, codes.Internal.String()) //nolint:wrapcheck // gRPC status errors are returned as-is
@@ -92,15 +114,16 @@ func defaultPanicHandler(_ context.Context, _ any) error {
 
 // serverOptions returns the grpc.ServerOption list: the default interceptor
 // chain with the instrumenter options between the request and the recovery
-// interceptors, preceded by a recovery interceptor of their own, transport
-// settings, and any options supplied with WithServerOption.
+// interceptors, preceded by a recovery interceptor of their own when they add
+// interceptors, transport settings, and any options supplied with
+// WithServerOption.
 func (c *config) serverOptions() []grpc.ServerOption {
 	opts := []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(c.unaryRequestInterceptor),
 		grpc.ChainStreamInterceptor(c.streamRequestInterceptor),
 	}
 
-	if len(c.instrumenters) > 0 {
+	if c.hasInstrumenterInterceptors() {
 		opts = append(opts,
 			grpc.ChainUnaryInterceptor(c.unaryRecoveryInterceptor),
 			grpc.ChainStreamInterceptor(c.streamRecoveryInterceptor),
@@ -166,6 +189,20 @@ func (c *config) lifecycleOptions() []srvlifecycle.Option {
 	}, c.lifecycleOpts...)
 }
 
+// hasInstrumenterInterceptors reports whether any instrumenter adds
+// interceptors. An instrumenter that does not implement
+// grpcutil.ServerInterceptorReporter is assumed to add them.
+func (c *config) hasInstrumenterInterceptors() bool {
+	for _, in := range c.instrumenters {
+		r, ok := in.(grpcutil.ServerInterceptorReporter)
+		if !ok || r.HasServerInterceptors() {
+			return true
+		}
+	}
+
+	return false
+}
+
 // methodTimeout returns the per-method timeout for fullMethod, or def when
 // none is set. A negative value means the timeout is disabled.
 func (c *config) methodTimeout(fullMethod string, def time.Duration) time.Duration {
@@ -190,30 +227,6 @@ func (c *config) hasMethodDeadline() bool {
 // isLoggerEnabled reports whether the request logger runs for fullMethod.
 func (c *config) isLoggerEnabled(fullMethod string) bool {
 	return !c.disableRequestLogger && !c.disabledMethodLogger[fullMethod]
-}
-
-// validateAddr checks if a gRPC server bind address is valid.
-// The host part may be empty, a hostname, an IPv4 or a bracketed IPv6 address
-// (e.g. ":8019", "localhost:8019", "0.0.0.0:8019", "[::1]:8019").
-func validateAddr(addr string) error {
-	addrErr := fmt.Errorf("invalid grpc server address: %s", addr)
-
-	_, port, err := net.SplitHostPort(addr)
-	if err != nil {
-		return addrErr
-	}
-
-	portInt, err := strconv.Atoi(port)
-	if err != nil {
-		return addrErr
-	}
-
-	// Port 0 is valid: it asks the operating system for an ephemeral port.
-	if portInt < 0 || portInt > math.MaxUint16 {
-		return addrErr
-	}
-
-	return nil
 }
 
 // validateFullMethod checks that name has the "/package.Service/Method" form.

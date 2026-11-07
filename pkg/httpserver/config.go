@@ -4,14 +4,10 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"fmt"
 	"log/slog"
-	"math"
-	"net"
 	"net/http"
 	"runtime/debug"
 	"slices"
-	"strconv"
 	"time"
 
 	"github.com/julienschmidt/httprouter"
@@ -123,30 +119,6 @@ func (c *config) lifecycleOptions() []srvlifecycle.Option {
 		srvlifecycle.WithName("http"),
 		srvlifecycle.WithLogger(c.logger),
 	}, c.lifecycleOpts...)
-}
-
-// validateAddr checks if a http server bind address is valid.
-// The host part may be empty, a hostname, an IPv4 or a bracketed IPv6 address
-// (e.g. ":8080", "localhost:8080", "0.0.0.0:8080", "[::1]:8080").
-func validateAddr(addr string) error {
-	addrErr := fmt.Errorf("invalid http server address: %s", addr)
-
-	_, port, err := net.SplitHostPort(addr)
-	if err != nil {
-		return addrErr
-	}
-
-	portInt, err := strconv.Atoi(port)
-	if err != nil {
-		return addrErr
-	}
-
-	// Port 0 is valid: it asks the operating system for an ephemeral port.
-	if portInt < 0 || portInt > math.MaxUint16 {
-		return addrErr
-	}
-
-	return nil
 }
 
 // commonMiddleware returns the common middleware for all routes.

@@ -36,9 +36,8 @@ func WithRouter(r *httprouter.Router) Option {
 // WithServerAddr sets the address the httpServer will bind to.
 func WithServerAddr(addr string) Option {
 	return func(cfg *config) error {
-		err := validateAddr(addr)
-		if err != nil {
-			return err
+		if !srvlifecycle.IsValidAddr(addr) {
+			return fmt.Errorf("invalid http server address: %s", addr)
 		}
 
 		cfg.serverAddr = addr

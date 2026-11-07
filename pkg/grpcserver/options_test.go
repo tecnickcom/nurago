@@ -324,3 +324,17 @@ func TestWithInstrumenter(t *testing.T) {
 	require.Len(t, cfg.instrumenters, 2)
 	require.Len(t, cfg.serverOptions(), 10, "a recovery chain and two interceptor options per instrumenter")
 }
+
+func TestWithInstrumenter_noInterceptors(t *testing.T) {
+	t.Parallel()
+
+	cfg := defaultConfig()
+
+	require.NoError(t, WithInstrumenter(statsOnlyInstrumenter{})(cfg))
+	require.Len(t, cfg.serverOptions(), 7, "the unreported instrumenter gets a recovery chain")
+
+	cfg = defaultConfig()
+
+	require.NoError(t, WithInstrumenter(reportedStatsInstrumenter{})(cfg))
+	require.Len(t, cfg.serverOptions(), 5, "no recovery chain without instrumenter interceptors")
+}
