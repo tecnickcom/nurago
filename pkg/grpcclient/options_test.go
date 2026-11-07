@@ -239,3 +239,20 @@ func TestWithDialOption(t *testing.T) {
 	require.NoError(t, WithDialOption(grpc.WithUserAgent("x"))(cfg))
 	require.Len(t, cfg.extraDialOptions, 1)
 }
+
+func TestWithInstrumenter(t *testing.T) {
+	t.Parallel()
+
+	cfg := defaultConfig()
+
+	require.Error(t, WithInstrumenter(nil)(cfg))
+	require.Empty(t, cfg.instrumenters)
+
+	require.NoError(t, WithInstrumenter(&testInstrumenter{})(cfg))
+	require.NoError(t, WithInstrumenter(&testInstrumenter{})(cfg))
+	require.Len(t, cfg.instrumenters, 2)
+
+	opts, err := cfg.dialOptions()
+	require.NoError(t, err)
+	require.Len(t, opts, 8, "two interceptor options per instrumenter")
+}

@@ -250,6 +250,25 @@ func WithStatsHandler(h stats.Handler) Option {
 	}
 }
 
+// WithInstrumenter adds the dial options of instrumenter, for example a
+// metrics or tracing backend. Interceptors added with
+// grpc.WithChainUnaryInterceptor or grpc.WithChainStreamInterceptor run after
+// the trace propagation and logger interceptors and before the default
+// deadline, so they see the propagated trace ID. Its other options follow the
+// same rules as WithDialOption. Instrumenters are applied in the order given.
+// A nil instrumenter is rejected.
+func WithInstrumenter(instrumenter grpcutil.ClientInstrumenter) Option {
+	return func(cfg *config) error {
+		if instrumenter == nil {
+			return errors.New("instrumenter is required")
+		}
+
+		cfg.instrumenters = append(cfg.instrumenters, instrumenter)
+
+		return nil
+	}
+}
+
 // WithUnaryInterceptor adds unary interceptors after the default ones, in the
 // provided order. Nil interceptors are rejected.
 func WithUnaryInterceptor(interceptors ...grpc.UnaryClientInterceptor) Option {

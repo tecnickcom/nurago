@@ -99,7 +99,7 @@ keeps only the modules your imports actually reach.
 
 <!-- gendoc:deps:start -->
 
-**41 of the 74 packages reach no external module at all**, using nothing
+**42 of the 77 packages reach no external module at all**, using nothing
 beyond the Go standard library:
 
 `backoff`, `countrycode`, `countryphone`, `decint`, `dnscache`, `encode`,
@@ -107,8 +107,8 @@ beyond the Go standard library:
 `healthrun`, `httpclient`, `httpretrier`, `ipify`, `logutil`, `maputil`,
 `metrics`, `mysqllock`, `numtrie`, `paging`, `periodic`, `phonekeypad`,
 `random`, `redact`, `retrier`, `sfcache`, `sliceutil`, `sqlconn`,
-`sqltransaction`, `sqlutil`, `stringmetric`, `strsplit`, `threadsafe`,
-`timeutil`, `traceid`, `tsmap`, `tsslice`, `typeutil`, `uhex`.
+`sqltransaction`, `sqlutil`, `srvlifecycle`, `stringmetric`, `strsplit`,
+`threadsafe`, `timeutil`, `traceid`, `tsmap`, `tsslice`, `typeutil`, `uhex`.
 
 Each package README lists its own footprint. Verify any of them with:
 
@@ -138,7 +138,7 @@ Each package also has a page on
 
 <!-- gendoc:catalog:start -->
 
-All 74 packages, each linking to its own README. The description is the
+All 77 packages, each linking to its own README. The description is the
 first sentence of the package documentation.
 
 - [awsopt](pkg/awsopt) - configures the aws-sdk-go-v2 library consistently across multiple AWS service clients. It centralizes config.LoadOptionsFunc calls into a composable Options slice that can be built once and handed to any AWS-based package in this library.
@@ -160,7 +160,7 @@ first sentence of the package documentation.
 - [filter](pkg/filter) - provides declarative, rule-based filtering for in-memory slices. It evaluates structured Rule expressions against slice elements and filters the slice in place.
 - [grpcclient](pkg/grpcclient) - builds preconfigured gRPC client connections with trace ID propagation, structured logging, default deadlines, TLS by default, and native gRPC retry policies.
 - [grpcserver](pkg/grpcserver) - provides a configurable gRPC server bootstrap for Go services.
-- [grpcutil](pkg/grpcutil) - provides shared gRPC helpers for trace ID propagation through metadata, for mapping between gRPC status codes and HTTP status codes, and for logging RPCs.
+- [grpcutil](pkg/grpcutil) - provides shared gRPC helpers for trace ID propagation through metadata, for mapping between gRPC status codes and HTTP status codes, for logging RPCs, and the instrumentation contract of gRPC servers and clients.
 - [healthcheck](pkg/healthcheck) - runs dependency probes concurrently and aggregates them into a single HTTP health endpoint.
 - [healthrun](pkg/healthcheck/healthrun) - runs dependency probes concurrently and reports the outcome of each one, without any transport dependency.
 - [httpclient](pkg/httpclient) - provides a configurable outbound HTTP client with trace propagation and structured request/response logging.
@@ -178,7 +178,9 @@ first sentence of the package documentation.
 - [maputil](pkg/maputil) - filters, maps, reduces, and inverts Go maps with generic functions.
 - [metrics](pkg/metrics) - defines a backend-agnostic instrumentation contract for Go services.
 - [opentel](pkg/metrics/opentel) - implements github.com/tecnickcom/nurago/pkg/metrics.Client using OpenTelemetry for both metrics and tracing.
+- [opentelgrpc](pkg/metrics/opentel/opentelgrpc) - adds OpenTelemetry tracing and metrics to gRPC servers and clients.
 - [prometheus](pkg/metrics/prometheus) - implements github.com/tecnickcom/nurago/pkg/metrics.Client using the Prometheus client ecosystem.
+- [prometheusgrpc](pkg/metrics/prometheus/prometheusgrpc) - collects Prometheus metrics for gRPC servers and clients.
 - [statsd](pkg/metrics/statsd) - implements github.com/tecnickcom/nurago/pkg/metrics.Client using the StatsD protocol.
 - [mysqllock](pkg/mysqllock) - provides process-distributed mutual exclusion using MySQL's named lock primitives GET_LOCK and RELEASE_LOCK.
 - [numtrie](pkg/numtrie) - provides a generic, digit-indexed trie (prefix tree) for associating values of any type with numerical keys, with built-in support for partial/prefix matching and alphabetical (vanity) phone-number keys.
@@ -202,6 +204,7 @@ first sentence of the package documentation.
 - [sqlutil](pkg/sqlutil) - quotes identifiers and string literals when generating SQL query fragments dynamically.
 - [sqlxtransaction](pkg/sqlxtransaction) - handles begin/commit/rollback control flow around business logic executed inside a sqlx transaction.
 - [sqs](pkg/sqs) - wraps github.com/aws/aws-sdk-go-v2/service/sqs with an API that covers the common queue workflow: send, receive, decode, acknowledge (delete), and health-check.
+- [srvlifecycle](pkg/srvlifecycle) - runs a network server in the background and shuts it down gracefully on a signal, on context cancelation, or on an explicit call.
 - [stringkey](pkg/stringkey) - derives a stable, compact, non-cryptographic key from multiple text fields for lookup, deduplication, and idempotency-style identifiers.
 - [stringmetric](pkg/stringmetric) - provides string distance functions for approximate text matching, comparison, and fuzzy search.
 - [strsplit](pkg/strsplit) - splits strings into bounded-size chunks without breaking Unicode characters, keeping human-readable boundaries (spaces, punctuation, and newlines).

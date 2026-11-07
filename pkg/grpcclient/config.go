@@ -49,6 +49,7 @@ type config struct {
 	statsHandlers      []stats.Handler
 	unaryInterceptors  []grpc.UnaryClientInterceptor
 	streamInterceptors []grpc.StreamClientInterceptor
+	instrumenters      []grpcutil.ClientInstrumenter
 	extraDialOptions   []grpc.DialOption
 }
 
@@ -66,7 +67,8 @@ func defaultConfig() *config {
 }
 
 // dialOptions returns the grpc.DialOption list: transport credentials, the
-// default interceptor chain, the retry service config, call and transport
+// default interceptor chain with the instrumenter options between the logger
+// and the deadline interceptors, the retry service config, call and transport
 // settings, and any options supplied with WithDialOption.
 func (c *config) dialOptions() ([]grpc.DialOption, error) {
 	err := c.validate()
@@ -74,22 +76,27 @@ func (c *config) dialOptions() ([]grpc.DialOption, error) {
 		return nil, err
 	}
 
-	unary := []grpc.UnaryClientInterceptor{c.unaryTraceInterceptor, c.unaryLogInterceptor}
-	if c.timeout > 0 {
-		unary = append(unary, c.unaryDeadlineInterceptor)
-	}
-
-	unary = append(unary, c.unaryInterceptors...)
-
-	stream := append([]grpc.StreamClientInterceptor{
-		c.streamTraceInterceptor,
-		c.streamLogInterceptor,
-	}, c.streamInterceptors...)
-
 	opts := []grpc.DialOption{
 		c.securityOption(),
-		grpc.WithChainUnaryInterceptor(unary...),
-		grpc.WithChainStreamInterceptor(stream...),
+		grpc.WithChainUnaryInterceptor(c.unaryTraceInterceptor, c.unaryLogInterceptor),
+		grpc.WithChainStreamInterceptor(c.streamTraceInterceptor, c.streamLogInterceptor),
+	}
+
+	for _, in := range c.instrumenters {
+		opts = append(opts, in.DialOptions()...)
+	}
+
+	unary := c.unaryInterceptors
+	if c.timeout > 0 {
+		unary = append([]grpc.UnaryClientInterceptor{c.unaryDeadlineInterceptor}, unary...)
+	}
+
+	if len(unary) > 0 {
+		opts = append(opts, grpc.WithChainUnaryInterceptor(unary...))
+	}
+
+	if len(c.streamInterceptors) > 0 {
+		opts = append(opts, grpc.WithChainStreamInterceptor(c.streamInterceptors...))
 	}
 
 	if len(c.retryPolicies) > 0 {

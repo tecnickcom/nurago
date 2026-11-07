@@ -96,6 +96,16 @@ type healthService struct {
 	hasLast bool
 }
 
+// optionalHealthServer returns the health server for hc, or nil when hc is
+// nil.
+func optionalHealthServer(hc *healthConfig, logger *slog.Logger) *healthServer {
+	if hc == nil {
+		return nil
+	}
+
+	return newHealthServer(hc, logger)
+}
+
 // newHealthServer builds the health service for cfg. The check runners log
 // through logger. Construction warnings are logged only by the "" runner,
 // since each ID group holds a subset of its checks.

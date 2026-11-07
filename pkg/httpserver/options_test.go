@@ -149,13 +149,9 @@ func TestWithShutdownTimeout(t *testing.T) {
 
 	cfg := defaultConfig()
 
-	err := WithShutdownTimeout(-1)(cfg)
-	require.Error(t, err)
-
-	v := 19 * time.Second
-	err = WithShutdownTimeout(v)(cfg)
+	err := WithShutdownTimeout(19 * time.Second)(cfg)
 	require.NoError(t, err)
-	require.Equal(t, v, cfg.shutdownTimeout)
+	require.Len(t, cfg.lifecycleOpts, 1)
 }
 
 func TestWithShutdownWaitGroup(t *testing.T) {
@@ -163,13 +159,9 @@ func TestWithShutdownWaitGroup(t *testing.T) {
 
 	cfg := defaultConfig()
 
-	err := WithShutdownWaitGroup(nil)(cfg)
-	require.Error(t, err)
-
-	v := &sync.WaitGroup{}
-	err = WithShutdownWaitGroup(v)(cfg)
+	err := WithShutdownWaitGroup(&sync.WaitGroup{})(cfg)
 	require.NoError(t, err)
-	require.Equal(t, v, cfg.shutdownWaitGroup)
+	require.Len(t, cfg.lifecycleOpts, 1)
 }
 
 func TestWithShutdownSignalChan(t *testing.T) {
@@ -177,13 +169,9 @@ func TestWithShutdownSignalChan(t *testing.T) {
 
 	cfg := defaultConfig()
 
-	err := WithShutdownSignalChan(nil)(cfg)
-	require.Error(t, err)
-
-	v := make(chan struct{})
-	err = WithShutdownSignalChan(v)(cfg)
+	err := WithShutdownSignalChan(make(chan struct{}))(cfg)
 	require.NoError(t, err)
-	require.Equal(t, v, cfg.shutdownSignalChan)
+	require.Len(t, cfg.lifecycleOpts, 1)
 }
 
 func TestWithTLSCertData(t *testing.T) {

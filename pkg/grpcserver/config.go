@@ -3,17 +3,18 @@ package grpcserver
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
 	"net"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/tecnickcom/nurago/pkg/grpcutil"
 	"github.com/tecnickcom/nurago/pkg/random"
 	"github.com/tecnickcom/nurago/pkg/redact"
+	"github.com/tecnickcom/nurago/pkg/srvlifecycle"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -44,7 +45,6 @@ type config struct {
 	maxHeaderListSize    uint32
 	keepaliveParams      *keepalive.ServerParameters
 	keepalivePolicy      *keepalive.EnforcementPolicy
-	shutdownTimeout      time.Duration
 	tlsConfig            *tls.Config
 	reflection           bool
 	health               *healthConfig
@@ -55,10 +55,10 @@ type config struct {
 	panicHandlerFunc     PanicHandlerFunc
 	unaryInterceptors    []grpc.UnaryServerInterceptor
 	streamInterceptors   []grpc.StreamServerInterceptor
+	instrumenters        []grpcutil.ServerInstrumenter
 	extraServerOptions   []grpc.ServerOption
 	logger               *slog.Logger
-	shutdownWaitGroup    *sync.WaitGroup
-	shutdownSignalChan   chan struct{}
+	lifecycleOpts        []srvlifecycle.Option
 	rnd                  *random.Rnd
 	contextKeys          []any
 	baseValues           []ctxValue
@@ -76,14 +76,11 @@ func defaultConfig() *config {
 		serverAddr:           ":8019",
 		traceIDMetadataKey:   grpcutil.DefaultTraceIDMetadataKey,
 		methodTimeouts:       make(map[string]time.Duration),
-		shutdownTimeout:      30 * time.Second,
 		redactFn:             redact.Default().BytesToString,
 		maxDumpSize:          defaultMaxDumpSize,
 		disabledMethodLogger: make(map[string]bool),
 		panicHandlerFunc:     defaultPanicHandler,
 		logger:               slog.Default(),
-		shutdownWaitGroup:    &sync.WaitGroup{},
-		shutdownSignalChan:   make(chan struct{}),
 		rnd:                  random.New(nil),
 	}
 }
@@ -94,23 +91,39 @@ func defaultPanicHandler(_ context.Context, _ any) error {
 }
 
 // serverOptions returns the grpc.ServerOption list: the default interceptor
-// chain, transport settings, and any options supplied with WithServerOption.
+// chain with the instrumenter options between the request and the recovery
+// interceptors, preceded by a recovery interceptor of their own, transport
+// settings, and any options supplied with WithServerOption.
 func (c *config) serverOptions() []grpc.ServerOption {
+	opts := []grpc.ServerOption{
+		grpc.ChainUnaryInterceptor(c.unaryRequestInterceptor),
+		grpc.ChainStreamInterceptor(c.streamRequestInterceptor),
+	}
+
+	if len(c.instrumenters) > 0 {
+		opts = append(opts,
+			grpc.ChainUnaryInterceptor(c.unaryRecoveryInterceptor),
+			grpc.ChainStreamInterceptor(c.streamRecoveryInterceptor),
+		)
+	}
+
+	for _, in := range c.instrumenters {
+		opts = append(opts, in.ServerOptions()...)
+	}
+
 	unary := append([]grpc.UnaryServerInterceptor{
-		c.unaryRequestInterceptor,
 		c.unaryRecoveryInterceptor,
 		c.unaryDeadlineInterceptor,
 	}, c.unaryInterceptors...)
 
 	stream := append([]grpc.StreamServerInterceptor{
-		c.streamRequestInterceptor,
 		c.streamRecoveryInterceptor,
 	}, c.streamInterceptors...)
 
-	opts := []grpc.ServerOption{
+	opts = append(opts,
 		grpc.ChainUnaryInterceptor(unary...),
 		grpc.ChainStreamInterceptor(stream...),
-	}
+	)
 
 	if c.hasMethodDeadline() {
 		opts = append(opts, grpc.InTapHandle(c.methodDeadlineTap))
@@ -141,6 +154,16 @@ func (c *config) serverOptions() []grpc.ServerOption {
 	}
 
 	return append(opts, c.extraServerOptions...)
+}
+
+// lifecycleOptions returns the srvlifecycle options of the server: the gRPC
+// defaults followed by the shutdown options.
+func (c *config) lifecycleOptions() []srvlifecycle.Option {
+	return append([]srvlifecycle.Option{
+		srvlifecycle.WithName("grpc"),
+		srvlifecycle.WithLogger(c.logger),
+		srvlifecycle.WithServerClosedFunc(func(err error) bool { return errors.Is(err, grpc.ErrServerStopped) }),
+	}, c.lifecycleOpts...)
 }
 
 // methodTimeout returns the per-method timeout for fullMethod, or def when

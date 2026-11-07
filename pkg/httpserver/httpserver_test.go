@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/tecnickcom/nurago/pkg/random"
 	"github.com/tecnickcom/nurago/pkg/redact"
+	"github.com/tecnickcom/nurago/pkg/srvlifecycle"
 	"github.com/tecnickcom/nurago/pkg/traceid"
 	"go.uber.org/mock/gomock"
 )
@@ -154,9 +155,6 @@ func TestStartServer(t *testing.T) {
 			name: "fail listen port already bound",
 			opts: []Option{
 				WithShutdownTimeout(1 * time.Millisecond),
-			},
-			setupBinder: func(b *MockBinder) {
-				b.EXPECT().BindHTTP(gomock.Any()).Times(1)
 			},
 			failListen: true,
 			wantErr:    true,
@@ -314,60 +312,73 @@ func Test_Serve_error(t *testing.T) {
 			ReadTimeout:       1 * time.Millisecond,
 			WriteTimeout:      1 * time.Millisecond,
 		},
-		listener:     mockListenerErr{},
-		shutdownDone: make(chan struct{}),
-		monitorDone:  make(chan struct{}),
-		serveErr:     make(chan error, 1),
 	}
 
-	h.serve()
+	var err error
+
+	h.lc, err = srvlifecycle.New(h.httpServer, mockListenerErr{}, h.cfg.lifecycleOptions()...)
+	require.NoError(t, err)
+
+	h.StartServer()
 
 	// An abnormal Serve failure is surfaced on the ServeError channel and must
 	// trigger shutdown so the wait group is released.
 	select {
 	case err := <-h.ServeError():
 		require.Error(t, err, "expected the serve failure to be published")
-	default:
+	case <-time.After(5 * time.Second):
 		t.Fatal("serve failure was not published on ServeError")
+	}
+
+	select {
+	case <-h.lc.Done():
+	case <-time.After(5 * time.Second):
+		t.Fatal("serve failure did not trigger shutdown")
 	}
 }
 
-func Test_Serve_error_channelFull(t *testing.T) {
+// unexpectedBinder fails the test when BindHTTP is called.
+type unexpectedBinder struct {
+	t *testing.T
+}
+
+func (b unexpectedBinder) BindHTTP(_ context.Context) []Route {
+	b.t.Error("BindHTTP must not be called")
+	return nil
+}
+
+func TestNew_lifecycleError(t *testing.T) {
 	t.Parallel()
 
-	h := &HTTPServer{
-		cfg: defaultConfig(),
-		ctx: t.Context(),
-		httpServer: &http.Server{
-			Addr:              ":54321",
-			ReadHeaderTimeout: 1 * time.Millisecond,
-			ReadTimeout:       1 * time.Millisecond,
-			WriteTimeout:      1 * time.Millisecond,
-		},
-		listener:     mockListenerErr{},
-		shutdownDone: make(chan struct{}),
-		monitorDone:  make(chan struct{}),
-		serveErr:     make(chan error, 1),
+	tests := []struct {
+		name string
+		opt  Option
+	}{
+		{name: "shutdown timeout", opt: WithShutdownTimeout(0)},
+		{name: "shutdown wait group", opt: WithShutdownWaitGroup(nil)},
+		{name: "shutdown signal channel", opt: WithShutdownSignalChan(nil)},
 	}
 
-	// Pre-fill the buffer so the non-blocking publish drops the new failure
-	// instead of blocking or overwriting the first one.
-	firstErr := errors.New("first failure")
-	h.serveErr <- firstErr
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	h.serve()
+			var lc net.ListenConfig
 
-	select {
-	case err := <-h.ServeError():
-		require.ErrorIs(t, err, firstErr, "the first published failure must be preserved")
-	default:
-		t.Fatal("expected the first serve failure to remain published")
-	}
+			l, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
+			require.NoError(t, err)
 
-	select {
-	case err := <-h.ServeError():
-		t.Fatalf("the second serve failure must be dropped, got: %v", err)
-	default:
+			addr := l.Addr().String()
+			require.NoError(t, l.Close())
+
+			h, err := New(t.Context(), unexpectedBinder{t: t}, WithServerAddr(addr), tt.opt)
+			require.ErrorContains(t, err, "failed creating the http server lifecycle")
+			require.Nil(t, h)
+
+			l, err = lc.Listen(t.Context(), "tcp", addr)
+			require.NoError(t, err, "the listener must be released")
+			require.NoError(t, l.Close())
+		})
 	}
 }
 
@@ -419,21 +430,11 @@ func TestShutdown_idempotent(t *testing.T) {
 	require.NoError(t, h.Shutdown(t.Context()))
 	require.NoError(t, h.Shutdown(t.Context()))
 
-	// The internal done channel must be closed by the first Shutdown so the
-	// shutdown-monitor goroutine started by StartServer does not leak.
+	// The done channel must be closed by the first Shutdown.
 	select {
-	case <-h.shutdownDone:
+	case <-h.lc.Done():
 	default:
-		t.Fatal("shutdownDone channel not closed: the shutdown-monitor goroutine leaks")
-	}
-
-	// Wait for the monitor goroutine to observe shutdownDone and exit. This is
-	// done before the test returns (canceling t.Context) so the goroutine
-	// deterministically wakes on the shutdownDone case, not on ctx.Done.
-	select {
-	case <-h.monitorDone:
-	case <-time.After(2 * time.Second):
-		t.Fatal("shutdown-monitor goroutine did not exit after direct Shutdown")
+		t.Fatal("done channel not closed after Shutdown")
 	}
 
 	// The single internal decrement must balance the StartServer Add(1).
@@ -711,22 +712,5 @@ func TestNew_tlsConfigWithGetCertificate(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotNil(t, h)
-	require.NoError(t, h.Shutdown(t.Context()))
-}
-
-func TestShutdown_neverStartedListenerCloseError(t *testing.T) {
-	t.Parallel()
-
-	h, err := New(
-		t.Context(),
-		NopBinder(),
-		WithServerAddr(":0"),
-		WithShutdownTimeout(1*time.Second),
-	)
-	require.NoError(t, err)
-
-	// Close the listener beforehand so Shutdown's explicit close of the
-	// never-started server's listener fails, covering the error-logging branch.
-	require.NoError(t, h.listener.Close())
 	require.NoError(t, h.Shutdown(t.Context()))
 }

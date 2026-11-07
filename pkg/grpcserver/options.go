@@ -12,6 +12,7 @@ import (
 
 	"github.com/tecnickcom/nurago/pkg/grpcutil"
 	"github.com/tecnickcom/nurago/pkg/healthcheck/healthrun"
+	"github.com/tecnickcom/nurago/pkg/srvlifecycle"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 )
@@ -142,14 +143,11 @@ func WithKeepaliveEnforcementPolicy(kep keepalive.EnforcementPolicy) Option {
 }
 
 // WithShutdownTimeout sets the time Shutdown waits for in-flight RPCs when it
-// is triggered by the context or the shutdown signal channel.
+// is triggered by the context or the shutdown signal channel. New fails when
+// timeout is not positive.
 func WithShutdownTimeout(timeout time.Duration) Option {
 	return func(cfg *config) error {
-		if timeout <= 0 {
-			return errors.New("invalid shutdownTimeout")
-		}
-
-		cfg.shutdownTimeout = timeout
+		cfg.lifecycleOpts = append(cfg.lifecycleOpts, srvlifecycle.WithShutdownTimeout(timeout))
 
 		return nil
 	}
@@ -158,14 +156,10 @@ func WithShutdownTimeout(timeout time.Duration) Option {
 // WithShutdownWaitGroup sets the shared waiting group to communicate externally when the server is shutdown.
 // The counter is incremented when the server starts (StartServer/StartServerCtx)
 // and decremented exactly once on shutdown, so Wait returns immediately if
-// called before the server has been started.
+// called before the server has been started. New fails when wg is nil.
 func WithShutdownWaitGroup(wg *sync.WaitGroup) Option {
 	return func(cfg *config) error {
-		if wg == nil {
-			return errors.New("shutdownWaitGroup is required")
-		}
-
-		cfg.shutdownWaitGroup = wg
+		cfg.lifecycleOpts = append(cfg.lifecycleOpts, srvlifecycle.WithShutdownWaitGroup(wg))
 
 		return nil
 	}
@@ -175,13 +169,10 @@ func WithShutdownWaitGroup(wg *sync.WaitGroup) Option {
 // When a value is received on the channel the server initiates the shutdown
 // process. Close the channel (rather than sending a single value) to wake every
 // server that shares it, since a single send is delivered to only one receiver.
+// New fails when ch is nil.
 func WithShutdownSignalChan(ch chan struct{}) Option {
 	return func(cfg *config) error {
-		if ch == nil {
-			return errors.New("shutdownSignalChan is required")
-		}
-
-		cfg.shutdownSignalChan = ch
+		cfg.lifecycleOpts = append(cfg.lifecycleOpts, srvlifecycle.WithShutdownSignalChan(ch))
 
 		return nil
 	}
@@ -416,6 +407,27 @@ func WithStreamInterceptor(interceptors ...grpc.StreamServerInterceptor) Option 
 		}
 
 		cfg.streamInterceptors = append(cfg.streamInterceptors, interceptors...)
+
+		return nil
+	}
+}
+
+// WithInstrumenter adds the server options of instrumenter, for example a
+// metrics or tracing backend. Interceptors added with grpc.ChainUnaryInterceptor
+// or grpc.ChainStreamInterceptor run after the request inject and logger
+// interceptor and before panic recovery, so they see the trace ID and the
+// codes.Internal status of a recovered panic. Its other options follow the
+// same rules as WithServerOption. When instrumenter also implements
+// grpcutil.ServerInitializer, New calls InitializeServer once every service
+// is registered. Instrumenters are applied in the order given. A nil
+// instrumenter is rejected.
+func WithInstrumenter(instrumenter grpcutil.ServerInstrumenter) Option {
+	return func(cfg *config) error {
+		if instrumenter == nil {
+			return errors.New("instrumenter is required")
+		}
+
+		cfg.instrumenters = append(cfg.instrumenters, instrumenter)
 
 		return nil
 	}

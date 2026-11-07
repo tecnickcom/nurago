@@ -12,7 +12,6 @@ import (
 	"runtime/debug"
 	"slices"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/julienschmidt/httprouter"
@@ -21,6 +20,7 @@ import (
 	"github.com/tecnickcom/nurago/pkg/profiling"
 	"github.com/tecnickcom/nurago/pkg/random"
 	"github.com/tecnickcom/nurago/pkg/redact"
+	"github.com/tecnickcom/nurago/pkg/srvlifecycle"
 	"github.com/tecnickcom/nurago/pkg/traceid"
 )
 
@@ -54,7 +54,6 @@ type config struct {
 	serverIdleTimeout             time.Duration
 	serverMaxHeaderBytes          int
 	maxRequestBodyBytes           int64
-	shutdownTimeout               time.Duration
 	tlsConfig                     *tls.Config
 	defaultEnabledRoutes          []DefaultRoute
 	indexHandlerFunc              IndexHandlerFunc
@@ -73,8 +72,7 @@ type config struct {
 	disableNotFoundLogger         bool
 	disableMethodNotAllowedLogger bool
 	logger                        *slog.Logger
-	shutdownWaitGroup             *sync.WaitGroup
-	shutdownSignalChan            chan struct{}
+	lifecycleOpts                 []srvlifecycle.Option
 	httpresp                      *httputil.HTTPResp
 	rnd                           *random.Rnd
 }
@@ -91,14 +89,11 @@ func defaultConfig() *config {
 		serverReadTimeout:         1 * time.Minute,
 		serverWriteTimeout:        1 * time.Minute,
 		serverIdleTimeout:         1 * time.Minute,
-		shutdownTimeout:           30 * time.Second,
 		defaultEnabledRoutes:      nil,
 		redactFn:                  redact.Default().BytesToString,
 		middleware:                []MiddlewareFn{},
 		disableDefaultRouteLogger: make(map[DefaultRoute]bool, len(allDefaultRoutes())),
 		logger:                    logger,
-		shutdownWaitGroup:         &sync.WaitGroup{},
-		shutdownSignalChan:        make(chan struct{}),
 		httpresp:                  httputil.NewHTTPResp(logger),
 		rnd:                       random.New(nil),
 	}
@@ -119,6 +114,15 @@ func defaultConfig() *config {
 // isIndexRouteEnabled checks if the index route is enabled in the configuration.
 func (c *config) isIndexRouteEnabled() bool {
 	return slices.Contains(c.defaultEnabledRoutes, IndexRoute)
+}
+
+// lifecycleOptions returns the srvlifecycle options of the server: the HTTP
+// defaults followed by the shutdown options.
+func (c *config) lifecycleOptions() []srvlifecycle.Option {
+	return append([]srvlifecycle.Option{
+		srvlifecycle.WithName("http"),
+		srvlifecycle.WithLogger(c.logger),
+	}, c.lifecycleOpts...)
 }
 
 // validateAddr checks if a http server bind address is valid.

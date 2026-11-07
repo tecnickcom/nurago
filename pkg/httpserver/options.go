@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/tecnickcom/nurago/pkg/srvlifecycle"
 )
 
 // Option configures an [HTTPServer] instance.
@@ -157,14 +158,11 @@ func WithMaxRequestBodyBytes(n int64) Option {
 	}
 }
 
-// WithShutdownTimeout sets the shutdown timeout.
+// WithShutdownTimeout sets the shutdown timeout. New fails when timeout is not
+// positive.
 func WithShutdownTimeout(timeout time.Duration) Option {
 	return func(cfg *config) error {
-		if timeout <= 0 {
-			return errors.New("invalid shutdownTimeout")
-		}
-
-		cfg.shutdownTimeout = timeout
+		cfg.lifecycleOpts = append(cfg.lifecycleOpts, srvlifecycle.WithShutdownTimeout(timeout))
 
 		return nil
 	}
@@ -173,14 +171,10 @@ func WithShutdownTimeout(timeout time.Duration) Option {
 // WithShutdownWaitGroup sets the shared waiting group to communicate externally when the server is shutdown.
 // The counter is incremented when the server starts (StartServer/StartServerCtx)
 // and decremented exactly once on shutdown, so Wait returns immediately if
-// called before the server has been started.
+// called before the server has been started. New fails when wg is nil.
 func WithShutdownWaitGroup(wg *sync.WaitGroup) Option {
 	return func(cfg *config) error {
-		if wg == nil {
-			return errors.New("shutdownWaitGroup is required")
-		}
-
-		cfg.shutdownWaitGroup = wg
+		cfg.lifecycleOpts = append(cfg.lifecycleOpts, srvlifecycle.WithShutdownWaitGroup(wg))
 
 		return nil
 	}
@@ -190,13 +184,10 @@ func WithShutdownWaitGroup(wg *sync.WaitGroup) Option {
 // When a value is received on the channel the server initiates the shutdown
 // process. Close the channel (rather than sending a single value) to wake every
 // server that shares it, since a single send is delivered to only one receiver.
+// New fails when ch is nil.
 func WithShutdownSignalChan(ch chan struct{}) Option {
 	return func(cfg *config) error {
-		if ch == nil {
-			return errors.New("shutdownSignalChan is required")
-		}
-
-		cfg.shutdownSignalChan = ch
+		cfg.lifecycleOpts = append(cfg.lifecycleOpts, srvlifecycle.WithShutdownSignalChan(ch))
 
 		return nil
 	}

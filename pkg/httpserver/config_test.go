@@ -24,7 +24,8 @@ func Test_defaultConfig(t *testing.T) {
 	require.NotNil(t, cfg.statusHandlerFunc)
 	require.NotNil(t, cfg.ipHandlerFunc)
 	require.NotEmpty(t, cfg.serverAddr)
-	require.NotEqual(t, 0, cfg.shutdownTimeout)
+	require.Empty(t, cfg.lifecycleOpts)
+	require.Len(t, cfg.lifecycleOptions(), 2)
 	require.NotEmpty(t, cfg.traceIDHeaderName)
 }
 

@@ -122,9 +122,8 @@ func TestWithShutdownTimeout(t *testing.T) {
 
 	cfg := defaultConfig()
 
-	require.Error(t, WithShutdownTimeout(0)(cfg))
 	require.NoError(t, WithShutdownTimeout(5*time.Second)(cfg))
-	require.Equal(t, 5*time.Second, cfg.shutdownTimeout)
+	require.Len(t, cfg.lifecycleOpts, 1)
 }
 
 func TestWithShutdownWaitGroup(t *testing.T) {
@@ -132,11 +131,8 @@ func TestWithShutdownWaitGroup(t *testing.T) {
 
 	cfg := defaultConfig()
 
-	require.Error(t, WithShutdownWaitGroup(nil)(cfg))
-
-	wg := &sync.WaitGroup{}
-	require.NoError(t, WithShutdownWaitGroup(wg)(cfg))
-	require.Same(t, wg, cfg.shutdownWaitGroup)
+	require.NoError(t, WithShutdownWaitGroup(&sync.WaitGroup{})(cfg))
+	require.Len(t, cfg.lifecycleOpts, 1)
 }
 
 func TestWithShutdownSignalChan(t *testing.T) {
@@ -144,11 +140,8 @@ func TestWithShutdownSignalChan(t *testing.T) {
 
 	cfg := defaultConfig()
 
-	require.Error(t, WithShutdownSignalChan(nil)(cfg))
-
-	ch := make(chan struct{})
-	require.NoError(t, WithShutdownSignalChan(ch)(cfg))
-	require.Equal(t, ch, cfg.shutdownSignalChan)
+	require.NoError(t, WithShutdownSignalChan(make(chan struct{}))(cfg))
+	require.Len(t, cfg.lifecycleOpts, 1)
 }
 
 func TestWithTLSCertData(t *testing.T) {
@@ -316,4 +309,18 @@ func TestWithServerOption(t *testing.T) {
 
 	require.NoError(t, WithServerOption(grpc.MaxRecvMsgSize(1), grpc.MaxSendMsgSize(1))(cfg))
 	require.Len(t, cfg.extraServerOptions, 2)
+}
+
+func TestWithInstrumenter(t *testing.T) {
+	t.Parallel()
+
+	cfg := defaultConfig()
+
+	require.Error(t, WithInstrumenter(nil)(cfg))
+	require.Empty(t, cfg.instrumenters)
+
+	require.NoError(t, WithInstrumenter(&testInstrumenter{})(cfg))
+	require.NoError(t, WithInstrumenter(&testInstrumenter{})(cfg))
+	require.Len(t, cfg.instrumenters, 2)
+	require.Len(t, cfg.serverOptions(), 10, "a recovery chain and two interceptor options per instrumenter")
 }

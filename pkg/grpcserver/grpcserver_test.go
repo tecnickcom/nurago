@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tecnickcom/nurago/pkg/srvlifecycle"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -99,6 +100,51 @@ func TestNew_logsBoundAddr(t *testing.T) {
 	require.Len(t, entries, 1)
 	require.Equal(t, s.Addr().String(), entries[0]["addr"])
 	require.NotEqual(t, "127.0.0.1:0", entries[0]["addr"])
+}
+
+// unexpectedBinder fails the test when BindGRPC is called.
+type unexpectedBinder struct {
+	t *testing.T
+}
+
+func (b unexpectedBinder) BindGRPC(_ context.Context, _ grpc.ServiceRegistrar) error {
+	b.t.Error("BindGRPC must not be called")
+	return nil
+}
+
+func TestNew_lifecycleError(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		opt  Option
+	}{
+		{name: "shutdown timeout", opt: WithShutdownTimeout(0)},
+		{name: "shutdown wait group", opt: WithShutdownWaitGroup(nil)},
+		{name: "shutdown signal channel", opt: WithShutdownSignalChan(nil)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var lc net.ListenConfig
+
+			l, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
+			require.NoError(t, err)
+
+			addr := l.Addr().String()
+			require.NoError(t, l.Close())
+
+			s, err := New(t.Context(), unexpectedBinder{t: t}, WithServerAddr(addr), WithLogger(discardLogger()), tt.opt)
+			require.ErrorContains(t, err, "failed creating the grpc server lifecycle")
+			require.Nil(t, s)
+
+			l, err = lc.Listen(t.Context(), "tcp", addr)
+			require.NoError(t, err, "the listener must be released")
+			require.NoError(t, l.Close())
+		})
+	}
 }
 
 func TestNew_listenError(t *testing.T) {
@@ -230,6 +276,30 @@ func TestNew_registrationErrors(t *testing.T) {
 	}
 }
 
+func TestNew_registrationErrorReleasesListener(t *testing.T) {
+	t.Parallel()
+
+	var lc net.ListenConfig
+
+	l, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	addr := l.Addr().String()
+	require.NoError(t, l.Close())
+
+	bind := funcBinder(func(context.Context, grpc.ServiceRegistrar) error {
+		return errors.New("bind failed")
+	})
+
+	s, err := New(t.Context(), bind, WithServerAddr(addr), WithLogger(discardLogger()), WithHealthService(nil))
+	require.ErrorIs(t, err, ErrServiceRegistration)
+	require.Nil(t, s)
+
+	l, err = lc.Listen(t.Context(), "tcp", addr)
+	require.NoError(t, err, "the listener must be released")
+	require.NoError(t, l.Close())
+}
+
 func TestNew_nilImplementationAllowed(t *testing.T) {
 	t.Parallel()
 
@@ -356,20 +426,6 @@ func TestShutdown_beforeStartReleasesListener(t *testing.T) {
 	require.NoError(t, ls.Close())
 }
 
-func TestShutdown_beforeStartListenerAlreadyClosed(t *testing.T) {
-	t.Parallel()
-
-	logger, sink := newTestLogger(slog.LevelDebug)
-
-	s, err := New(t.Context(), NopBinder(), WithServerAddr("127.0.0.1:0"), WithLogger(logger))
-	require.NoError(t, err)
-
-	require.NoError(t, s.listener.Close())
-	require.NoError(t, s.Shutdown(t.Context()))
-
-	require.Len(t, sink.entries(t, "failed closing the grpc server listener"), 1)
-}
-
 func TestShutdown_idempotent(t *testing.T) {
 	t.Parallel()
 
@@ -382,9 +438,9 @@ func TestShutdown_idempotent(t *testing.T) {
 	waitTimeout(t, wg) // a second decrement would panic with a negative counter
 
 	select {
-	case <-s.monitorDone:
-	case <-time.After(2 * time.Second):
-		require.Fail(t, "the shutdown-monitor goroutine did not exit after a direct Shutdown")
+	case <-s.lc.Done():
+	default:
+		require.Fail(t, "the done channel is not closed after Shutdown")
 	}
 }
 
@@ -475,11 +531,21 @@ func TestServeError(t *testing.T) {
 
 	wg := &sync.WaitGroup{}
 
-	s, err := New(t.Context(), NopBinder(), WithServerAddr("127.0.0.1:0"), WithLogger(discardLogger()), WithShutdownWaitGroup(wg))
-	require.NoError(t, err)
+	var lc net.ListenConfig
 
 	// A closed listener makes Serve fail immediately.
-	require.NoError(t, s.listener.Close())
+	l, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	require.NoError(t, l.Close())
+
+	cfg := defaultConfig()
+	cfg.logger = discardLogger()
+	require.NoError(t, WithShutdownWaitGroup(wg)(cfg))
+
+	s := &GRPCServer{cfg: cfg, ctx: t.Context(), grpcServer: grpc.NewServer()}
+
+	s.lc, err = srvlifecycle.New(lifecycleServer{s: s}, l, cfg.lifecycleOptions()...)
+	require.NoError(t, err)
 
 	s.StartServer()
 

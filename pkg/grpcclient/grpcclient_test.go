@@ -43,7 +43,7 @@ func TestDialOptions(t *testing.T) {
 
 	opts, err := cfg.dialOptions()
 	require.NoError(t, err)
-	require.Len(t, opts, 3, "credentials and interceptor chains only")
+	require.Len(t, opts, 4, "credentials, default interceptor chains and the deadline chain only")
 
 	p := validRetryPolicy()
 	p.MaxAttempts = 9
@@ -65,7 +65,55 @@ func TestDialOptions(t *testing.T) {
 
 	opts, err = cfg.dialOptions()
 	require.NoError(t, err)
-	require.Len(t, opts, 3+2+4+1)
+	require.Len(t, opts, 4+2+4+1)
+
+	require.NoError(t, WithTimeout(0)(cfg))
+
+	opts, err = cfg.dialOptions()
+	require.NoError(t, err)
+	require.Len(t, opts, 3+2+4+1, "no deadline interceptor chain")
+
+	require.NoError(t, WithStreamInterceptor(testStreamInterceptor)(cfg))
+
+	opts, err = cfg.dialOptions()
+	require.NoError(t, err)
+	require.Len(t, opts, 3+1+2+4+1, "the custom stream interceptor chain")
+}
+
+func TestDialOptions_unaryInterceptors(t *testing.T) {
+	t.Parallel()
+
+	cfg := defaultConfig()
+
+	require.NoError(t, WithUnaryInterceptor(testUnaryInterceptor)(cfg))
+	require.NoError(t, WithTimeout(time.Second)(cfg))
+
+	opts, err := cfg.dialOptions()
+	require.NoError(t, err)
+	require.Len(t, opts, 4, "one chain with the deadline and custom interceptors")
+	require.Len(t, cfg.unaryInterceptors, 1, "the custom interceptors are not modified")
+}
+
+func testUnaryInterceptor(
+	ctx context.Context,
+	method string,
+	req, reply any,
+	cc *grpc.ClientConn,
+	invoker grpc.UnaryInvoker,
+	opts ...grpc.CallOption,
+) error {
+	return invoker(ctx, method, req, reply, cc, opts...)
+}
+
+func testStreamInterceptor(
+	ctx context.Context,
+	desc *grpc.StreamDesc,
+	cc *grpc.ClientConn,
+	method string,
+	streamer grpc.Streamer,
+	opts ...grpc.CallOption,
+) (grpc.ClientStream, error) {
+	return streamer(ctx, desc, cc, method, opts...)
 }
 
 func TestDialOptions_maxAttemptsAboveCap(t *testing.T) {

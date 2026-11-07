@@ -19,13 +19,12 @@ func TestDefaultConfig(t *testing.T) {
 
 	require.Equal(t, ":8019", cfg.serverAddr)
 	require.Equal(t, "x-request-id", cfg.traceIDMetadataKey)
-	require.Equal(t, 30*time.Second, cfg.shutdownTimeout)
 	require.Zero(t, cfg.requestTimeout)
 	require.False(t, cfg.reflection)
 	require.NotNil(t, cfg.redactFn)
 	require.NotNil(t, cfg.logger)
-	require.NotNil(t, cfg.shutdownWaitGroup)
-	require.NotNil(t, cfg.shutdownSignalChan)
+	require.Empty(t, cfg.lifecycleOpts)
+	require.Len(t, cfg.lifecycleOptions(), 3)
 	require.NotNil(t, cfg.rnd)
 	require.Empty(t, cfg.contextKeys)
 	require.Empty(t, cfg.baseValues)
@@ -43,7 +42,7 @@ func TestServerOptions(t *testing.T) {
 	t.Parallel()
 
 	cfg := defaultConfig()
-	require.Len(t, cfg.serverOptions(), 2, "interceptor chains only")
+	require.Len(t, cfg.serverOptions(), 4, "interceptor chains only")
 
 	certPEM, keyPEM := makeTestCert(t)
 
@@ -61,13 +60,13 @@ func TestServerOptions(t *testing.T) {
 		require.NoError(t, o(cfg))
 	}
 
-	require.Len(t, cfg.serverOptions(), 9)
+	require.Len(t, cfg.serverOptions(), 11)
 
 	require.NoError(t, WithMethodTimeout(methodUnaryCall, -1)(cfg))
-	require.Len(t, cfg.serverOptions(), 9, "a disabled method timeout installs no tap handle")
+	require.Len(t, cfg.serverOptions(), 11, "a disabled method timeout installs no tap handle")
 
 	require.NoError(t, WithMethodTimeout(methodFullDuplexCall, time.Second)(cfg))
-	require.Len(t, cfg.serverOptions(), 10, "a method timeout installs the tap handle")
+	require.Len(t, cfg.serverOptions(), 12, "a method timeout installs the tap handle")
 }
 
 func TestValidateTLSConfig(t *testing.T) {

@@ -40,6 +40,19 @@ Every unary and streaming RPC passes through, outermost first:
   - Custom interceptors added with [WithUnaryInterceptor] and
     [WithStreamInterceptor], in the order given.
 
+The interceptors of the instrumenters added with [WithInstrumenter] run
+between the request logger and the panic recovery. When instrumenters are
+set, a second panic recovery runs between the request logger and their
+interceptors, so a panic they raise is answered and logged like a handler
+panic.
+
+# Instrumentation
+
+[WithInstrumenter] adds the server options of a
+[github.com/tecnickcom/nurago/pkg/grpcutil.ServerInstrumenter], such as the
+Prometheus metrics of the metrics/prometheus/prometheusgrpc package or the
+OpenTelemetry spans and metrics of the metrics/opentel/opentelgrpc package.
+
 # Health Service
 
 [WithHealthService] registers the standard grpc.health.v1.Health service,
@@ -110,13 +123,14 @@ package grpcserver
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net"
 	"reflect"
 	"sync"
 
+	"github.com/tecnickcom/nurago/pkg/grpcutil"
+	"github.com/tecnickcom/nurago/pkg/srvlifecycle"
 	"google.golang.org/grpc"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
@@ -143,22 +157,15 @@ func (b *nopBinder) BindGRPC(_ context.Context, _ grpc.ServiceRegistrar) error {
 
 // GRPCServer defines the gRPC server object.
 type GRPCServer struct {
-	cfg          *config
-	ctx          context.Context //nolint:containedctx
-	grpcServer   *grpc.Server
-	health       *healthServer // nil unless WithHealthService is set
-	listener     net.Listener
-	startedMutex sync.Mutex
-	started      bool
-	stopped      bool // set once Shutdown has run, guarding against a late Start.
-	shutdownOnce sync.Once
-	shutdownDone chan struct{}
-	monitorDone  chan struct{} // closed when the shutdown-monitor goroutine exits
-	serveErr     chan error    // buffered (size 1); receives an abnormal Serve failure
+	cfg        *config
+	ctx        context.Context //nolint:containedctx
+	grpcServer *grpc.Server
+	health     *healthServer // nil unless WithHealthService is set
+	lc         *srvlifecycle.Lifecycle
 }
 
-// New constructs a gRPC server with the default interceptor chain, registers
-// the services supplied by binder, and binds the listener.
+// New constructs a gRPC server with the default interceptor chain, binds the
+// listener, and registers the services supplied by binder.
 //
 // The listener is bound immediately: on success the server already holds the
 // network address. If the returned server is never started, call
@@ -213,38 +220,41 @@ func New(ctx context.Context, binder Binder, opts ...Option) (*GRPCServer, error
 		slog.String("addr", listener.Addr().String()),
 	)
 
-	var health *healthServer
-	if cfg.health != nil {
-		health = newHealthServer(cfg.health, cfg.logger)
+	s := &GRPCServer{
+		cfg:        cfg,
+		ctx:        ctx,
+		grpcServer: srv,
 	}
 
-	err = registerServices(ctx, binder, srv, health, cfg.reflection, cfg.logger)
+	s.lc, err = srvlifecycle.New(lifecycleServer{s: s}, listener, cfg.lifecycleOptions()...)
 	if err != nil {
 		srv.Stop()
 
 		_ = listener.Close()
 
+		return nil, fmt.Errorf("failed creating the grpc server lifecycle: %w", err)
+	}
+
+	s.health = optionalHealthServer(cfg.health, cfg.logger)
+
+	err = registerServices(ctx, binder, srv, s.health, cfg.reflection, cfg.logger)
+	if err != nil {
+		// Stops the never-started server and closes the listener.
+		_ = s.lc.Shutdown(ctx)
+
 		return nil, err
 	}
 
-	return &GRPCServer{
-			cfg:          cfg,
-			ctx:          ctx,
-			grpcServer:   srv,
-			health:       health,
-			listener:     listener,
-			shutdownDone: make(chan struct{}),
-			monitorDone:  make(chan struct{}),
-			serveErr:     make(chan error, 1),
-		},
-		nil
+	initializeServer(srv, cfg.instrumenters)
+
+	return s, nil
 }
 
 // Addr returns the network address the server listener is bound to. It is
 // primarily useful when binding to an ephemeral port (":0") to discover the
 // actual port assigned by the operating system.
 func (s *GRPCServer) Addr() net.Addr {
-	return s.listener.Addr()
+	return s.lc.Addr()
 }
 
 // ServeError returns a channel that receives the error that caused the server
@@ -252,7 +262,7 @@ func (s *GRPCServer) Addr() net.Addr {
 // The channel is buffered (size 1) and never receives a nil value. A server that
 // stops through Shutdown leaves it empty.
 func (s *GRPCServer) ServeError() <-chan error {
-	return s.serveErr
+	return s.lc.ServeError()
 }
 
 // GetServiceInfo returns the registered services, keyed by fully qualified
@@ -272,57 +282,8 @@ func (s *GRPCServer) GetServiceInfo() map[string]grpc.ServiceInfo {
 // down: this keeps the shutdown wait group balanced (a single Add(1) matched by a
 // single decrement) and avoids serving twice on the same listener. A nil ctx is
 // treated as context.Background().
-//
-//nolint:contextcheck // a nil ctx is deliberately replaced with context.Background()
 func (s *GRPCServer) StartServerCtx(ctx context.Context) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
-	// Register the running server with the wait group synchronously, before any
-	// goroutine (including the shutdown one) can decrement it. The matching
-	// decrement happens exactly once in Shutdown via sync.Once, and only for a
-	// started server.
-	s.startedMutex.Lock()
-
-	if s.started || s.stopped {
-		s.startedMutex.Unlock()
-		s.cfg.logger.Warn("start ignored: server already started or shut down")
-
-		return
-	}
-
-	s.started = true
-	s.cfg.shutdownWaitGroup.Add(1)
-	s.startedMutex.Unlock()
-
-	// wait for shutdown signal, direct Shutdown call, or context cancelation
-	go func() { //nolint:gosec
-		defer close(s.monitorDone)
-
-		select {
-		case <-s.cfg.shutdownSignalChan:
-			s.cfg.logger.Debug("shutdown notification received")
-		case <-s.shutdownDone:
-			// Shutdown was already called directly: exit without leaking this goroutine.
-			return
-		case <-ctx.Done():
-			s.cfg.logger.Warn("context canceled")
-		}
-
-		// The shutdown context is independent from the parent context.
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), s.cfg.shutdownTimeout)
-		defer cancel()
-
-		_ = s.Shutdown(shutdownCtx) //nolint:contextcheck
-	}()
-
-	// start server
-	go func() {
-		s.serve()
-	}()
-
-	s.cfg.logger.Info("listening for grpc requests")
+	s.lc.Start(ctx)
 }
 
 // StartServer starts the server in background using the context from New().
@@ -341,57 +302,18 @@ func (s *GRPCServer) StartServer() {
 // (e.g. manually and via the internal context/signal goroutine): the wait group
 // is decremented exactly once, and only when the server was actually started.
 func (s *GRPCServer) Shutdown(ctx context.Context) error {
-	s.cfg.logger.Debug("shutting down grpc server")
+	return s.lc.Shutdown(ctx) //nolint:wrapcheck // stop already wraps its error
+}
 
+// stop makes the health service report NOT_SERVING, then runs GracefulStop
+// and falls back to Stop when ctx expires first. A server that was never
+// started has no connections to drain and is stopped directly.
+func (s *GRPCServer) stop(ctx context.Context) error {
 	if s.health != nil {
 		s.health.shutdown()
 	}
 
-	err := s.stop(ctx)
-
-	s.shutdownOnce.Do(func() {
-		// Unblock the internal shutdown-monitor goroutine (if any),
-		// so a direct Shutdown call does not leak it.
-		close(s.shutdownDone)
-
-		s.startedMutex.Lock()
-		defer s.startedMutex.Unlock()
-
-		s.stopped = true
-
-		if s.started {
-			s.cfg.shutdownWaitGroup.Add(-1)
-			return
-		}
-
-		// grpc.Server only closes listeners passed to Serve, so a never-started
-		// server must release its bound listener explicitly.
-		cerr := s.listener.Close()
-		if cerr != nil {
-			s.cfg.logger.With(slog.Any("error", cerr)).Debug("failed closing the grpc server listener")
-		}
-	})
-
-	if err != nil {
-		s.cfg.logger.With(slog.Any("error", err)).Warn("grpc server shutdown completed with error")
-
-		return err
-	}
-
-	s.cfg.logger.Debug("grpc server shutdown complete")
-
-	return nil
-}
-
-// stop runs GracefulStop and falls back to Stop when ctx expires first. A
-// server that was never started has no connections to drain and is stopped
-// directly.
-func (s *GRPCServer) stop(ctx context.Context) error {
-	s.startedMutex.Lock()
-	started := s.started
-	s.startedMutex.Unlock()
-
-	if !started {
+	if !s.lc.Started() {
 		s.grpcServer.Stop()
 
 		return nil
@@ -407,6 +329,21 @@ func (s *GRPCServer) stop(ctx context.Context) error {
 	// Stop closes every connection and aborts the pending GracefulStop.
 	// It does not wait for running handlers.
 	return waitStop(ctx, done, s.grpcServer.Stop)
+}
+
+// lifecycleServer adapts a GRPCServer to srvlifecycle.Server.
+type lifecycleServer struct {
+	s *GRPCServer
+}
+
+// Serve serves gRPC requests on l.
+func (a lifecycleServer) Serve(l net.Listener) error {
+	return a.s.grpcServer.Serve(l) //nolint:wrapcheck // returned as-is to the lifecycle
+}
+
+// Shutdown stops the server.
+func (a lifecycleServer) Shutdown(ctx context.Context) error {
+	return a.s.stop(ctx)
 }
 
 // waitStop waits for done and returns nil. When ctx expires first and done is
@@ -427,32 +364,6 @@ func waitStop(ctx context.Context, done <-chan struct{}, forceStop func()) error
 	forceStop()
 
 	return fmt.Errorf("grpc server graceful shutdown interrupted: %w", ctx.Err())
-}
-
-// serve starts serving gRPC requests. On any failure other than a normal
-// shutdown it releases the wait group and unblocks the monitor goroutine by
-// triggering Shutdown, and surfaces the error on the ServeError channel so the
-// application is not left waiting on a server that has already died.
-func (s *GRPCServer) serve() {
-	err := s.grpcServer.Serve(s.listener)
-	if err == nil || errors.Is(err, grpc.ErrServerStopped) {
-		s.cfg.logger.Debug("closed grpc server")
-		return
-	}
-
-	s.cfg.logger.With(slog.Any("error", err)).Error("unexpected grpc server failure")
-
-	// Non-blocking publish of the failure (buffer size 1, never overwritten).
-	select {
-	case s.serveErr <- err:
-	default:
-	}
-
-	// Ensure the wait group is released and the monitor goroutine unblocked.
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), s.cfg.shutdownTimeout)
-	defer cancel()
-
-	_ = s.Shutdown(shutdownCtx)
 }
 
 // newServer calls grpc.NewServer and returns the panic it raises for invalid
@@ -520,6 +431,16 @@ func registerServices(
 	}
 
 	return reg.result()
+}
+
+// initializeServer calls InitializeServer on the instrumenters that
+// implement grpcutil.ServerInitializer.
+func initializeServer(srv *grpc.Server, instrumenters []grpcutil.ServerInstrumenter) {
+	for _, in := range instrumenters {
+		if si, ok := in.(grpcutil.ServerInitializer); ok {
+			si.InitializeServer(srv)
+		}
+	}
 }
 
 // registrar validates each registration before delegating to grpc.Server,

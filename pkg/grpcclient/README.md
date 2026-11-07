@@ -27,6 +27,16 @@ Every unary and streaming RPC passes through, outermost first:
   - Custom interceptors added with `WithUnaryInterceptor` and
     `WithStreamInterceptor`, in the order given.
 
+The interceptors of the instrumenters added with `WithInstrumenter` run
+between the logger and the default deadline.
+
+## Instrumentation
+
+`WithInstrumenter` adds the dial options of a
+`github.com/tecnickcom/nurago/pkg/grpcutil.ClientInstrumenter`, such as the
+Prometheus metrics of the metrics/prometheus/prometheusgrpc package or the
+OpenTelemetry spans and metrics of the metrics/opentel/opentelgrpc package.
+
 ## Logging Behavior
 
 Each entry carries the component, trace ID, target, service, method, RPC type

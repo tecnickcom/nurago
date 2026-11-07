@@ -1,7 +1,7 @@
 # nurago
 
-> 74 independent Go packages for backend services. Each is imported on its
-> own and pulls only its own dependencies; 41 reach no external module at all.
+> 77 independent Go packages for backend services. Each is imported on its
+> own and pulls only its own dependencies; 42 reach no external module at all.
 
 Install: `go get github.com/tecnickcom/nurago`
 Website: https://nurago.org/
@@ -30,7 +30,7 @@ Reference documentation: https://pkg.go.dev/github.com/tecnickcom/nurago
 - [filter](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/filter): Package filter provides declarative, rule-based filtering for in-memory slices. It evaluates structured Rule expressions against slice elements and filters the slice in place.
 - [grpcclient](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/grpcclient): Package grpcclient builds preconfigured gRPC client connections with trace ID propagation, structured logging, default deadlines, TLS by default, and native gRPC retry policies.
 - [grpcserver](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/grpcserver): Package grpcserver provides a configurable gRPC server bootstrap for Go services.
-- [grpcutil](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/grpcutil): Package grpcutil provides shared gRPC helpers for trace ID propagation through metadata, for mapping between gRPC status codes and HTTP status codes, and for logging RPCs.
+- [grpcutil](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/grpcutil): Package grpcutil provides shared gRPC helpers for trace ID propagation through metadata, for mapping between gRPC status codes and HTTP status codes, for logging RPCs, and the instrumentation contract of gRPC servers and clients.
 - [healthcheck](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/healthcheck): Package healthcheck runs dependency probes concurrently and aggregates them into a single HTTP health endpoint.
 - [healthrun](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/healthcheck/healthrun): Package healthrun runs dependency probes concurrently and reports the outcome of each one, without any transport dependency.
 - [httpclient](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/httpclient): Package httpclient provides a configurable outbound HTTP client with trace propagation and structured request/response logging.
@@ -48,7 +48,9 @@ Reference documentation: https://pkg.go.dev/github.com/tecnickcom/nurago
 - [maputil](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/maputil): Package maputil filters, maps, reduces, and inverts Go maps with generic functions.
 - [metrics](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/metrics): Package metrics defines a backend-agnostic instrumentation contract for Go services.
 - [opentel](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/metrics/opentel): Package opentel implements github.com/tecnickcom/nurago/pkg/metrics.Client using OpenTelemetry for both metrics and tracing.
+- [opentelgrpc](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/metrics/opentel/opentelgrpc): Package opentelgrpc adds OpenTelemetry tracing and metrics to gRPC servers and clients.
 - [prometheus](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/metrics/prometheus): Package prometheus implements github.com/tecnickcom/nurago/pkg/metrics.Client using the Prometheus client ecosystem.
+- [prometheusgrpc](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/metrics/prometheus/prometheusgrpc): Package prometheusgrpc collects Prometheus metrics for gRPC servers and clients.
 - [statsd](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/metrics/statsd): Package statsd implements github.com/tecnickcom/nurago/pkg/metrics.Client using the StatsD protocol.
 - [mysqllock](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/mysqllock): Package mysqllock provides process-distributed mutual exclusion using MySQL's named lock primitives GET_LOCK and RELEASE_LOCK.
 - [numtrie](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/numtrie): Package numtrie provides a generic, digit-indexed trie (prefix tree) for associating values of any type with numerical keys, with built-in support for partial/prefix matching and alphabetical (vanity) phone-number keys.
@@ -72,6 +74,7 @@ Reference documentation: https://pkg.go.dev/github.com/tecnickcom/nurago
 - [sqlutil](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/sqlutil): Package sqlutil quotes identifiers and string literals when generating SQL query fragments dynamically.
 - [sqlxtransaction](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/sqlxtransaction): Package sqlxtransaction handles begin/commit/rollback control flow around business logic executed inside a sqlx transaction.
 - [sqs](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/sqs): Package sqs wraps github.com/aws/aws-sdk-go-v2/service/sqs with an API that covers the common queue workflow: send, receive, decode, acknowledge (delete), and health-check.
+- [srvlifecycle](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/srvlifecycle): Package srvlifecycle runs a network server in the background and shuts it down gracefully on a signal, on context cancelation, or on an explicit call.
 - [stringkey](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/stringkey): Package stringkey derives a stable, compact, non-cryptographic key from multiple text fields for lookup, deduplication, and idempotency-style identifiers.
 - [stringmetric](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/stringmetric): Package stringmetric provides string distance functions for approximate text matching, comparison, and fuzzy search.
 - [strsplit](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/strsplit): Package strsplit splits strings into bounded-size chunks without breaking Unicode characters, keeping human-readable boundaries (spaces, punctuation, and newlines).

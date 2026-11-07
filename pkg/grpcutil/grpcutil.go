@@ -1,7 +1,7 @@
 /*
 Package grpcutil provides shared gRPC helpers for trace ID propagation through
-metadata, for mapping between gRPC status codes and HTTP status codes, and for
-logging RPCs.
+metadata, for mapping between gRPC status codes and HTTP status codes, for
+logging RPCs, and the instrumentation contract of gRPC servers and clients.
 
 # Trace ID Propagation
 
@@ -40,6 +40,19 @@ default key interoperates with HTTP services using the same header.
   - [DumpMessage] renders a protobuf message as JSON for a log entry, capped
     by encoded size and passed through a [RedactFn].
 
+# Instrumentation
+
+[ServerInstrumenter] and [ClientInstrumenter] are the gRPC counterparts of
+the InstrumentHandler and InstrumentRoundTripper methods of
+[github.com/tecnickcom/nurago/pkg/metrics.Client]. They supply the server or
+dial options that add metrics or tracing to a server or client. A server
+instrumenter that also implements [ServerInitializer] is given the server
+once every service is registered.
+
+The grpcserver and grpcclient packages accept them with their WithInstrumenter
+options. The metrics/prometheus/prometheusgrpc and metrics/opentel/opentelgrpc
+packages implement them.
+
 # When To Use
 
   - A gRPC service or client must carry the same trace ID as the HTTP services
@@ -47,6 +60,7 @@ default key interoperates with HTTP services using the same header.
   - Application errors classified by HTTP status must be returned over gRPC,
     or the other way around.
   - A gRPC server or client interceptor logs RPCs.
+  - A metrics or tracing backend must plug into gRPC servers and clients.
 */
 package grpcutil
 

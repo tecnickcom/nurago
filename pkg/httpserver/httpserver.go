@@ -67,16 +67,15 @@ package httpserver
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
 	"strings"
-	"sync"
 
 	"github.com/tecnickcom/nurago/pkg/httputil"
 	"github.com/tecnickcom/nurago/pkg/logutil"
+	"github.com/tecnickcom/nurago/pkg/srvlifecycle"
 )
 
 // Binder is an interface to allow configuring the HTTP router.
@@ -98,17 +97,10 @@ func (b *nopBinder) BindHTTP(_ context.Context) []Route { return nil }
 
 // HTTPServer defines the HTTP Server object.
 type HTTPServer struct {
-	cfg          *config
-	ctx          context.Context //nolint:containedctx
-	httpServer   *http.Server
-	listener     net.Listener
-	startedMutex sync.Mutex
-	started      bool
-	stopped      bool // set once Shutdown has run, guarding against a late Start.
-	shutdownOnce sync.Once
-	shutdownDone chan struct{}
-	monitorDone  chan struct{} // closed when the shutdown-monitor goroutine exits
-	serveErr     chan error    // buffered (size 1); receives an abnormal Serve failure
+	cfg        *config
+	ctx        context.Context //nolint:containedctx
+	httpServer *http.Server
+	lc         *srvlifecycle.Lifecycle
 }
 
 // New constructs HTTP server with router, middleware, default operational routes, TLS, and graceful shutdown orchestration.
@@ -150,11 +142,6 @@ func New(ctx context.Context, binder Binder, opts ...Option) (*HTTPServer, error
 
 	cfg.setRouter()
 
-	err := loadRoutes(ctx, binder, cfg)
-	if err != nil {
-		return nil, err
-	}
-
 	listener, err := netListener(ctx, cfg.serverAddr, cfg.tlsConfig)
 	if err != nil {
 		return nil, err
@@ -176,35 +163,48 @@ func New(ctx context.Context, binder Binder, opts ...Option) (*HTTPServer, error
 	protocols.SetHTTP1(true)
 	protocols.SetHTTP2(true)
 
-	return &HTTPServer{
-			cfg: cfg,
-			ctx: ctx,
-			httpServer: &http.Server{
-				Addr:              cfg.serverAddr,
-				Handler:           cfg.router,
-				ReadHeaderTimeout: cfg.serverReadHeaderTimeout,
-				ReadTimeout:       cfg.serverReadTimeout,
-				IdleTimeout:       cfg.serverIdleTimeout,
-				MaxHeaderBytes:    cfg.serverMaxHeaderBytes,
-				TLSConfig:         cfg.tlsConfig,
-				WriteTimeout:      cfg.serverWriteTimeout,
-				BaseContext:       func(_ net.Listener) context.Context { return baseCtx },
-				ErrorLog:          logutil.NewLogFromSlog(cfg.logger),
-				Protocols:         protocols,
-			},
-			listener:     listener,
-			shutdownDone: make(chan struct{}),
-			monitorDone:  make(chan struct{}),
-			serveErr:     make(chan error, 1),
+	h := &HTTPServer{
+		cfg: cfg,
+		ctx: ctx,
+		httpServer: &http.Server{
+			Addr:              cfg.serverAddr,
+			Handler:           cfg.router,
+			ReadHeaderTimeout: cfg.serverReadHeaderTimeout,
+			ReadTimeout:       cfg.serverReadTimeout,
+			IdleTimeout:       cfg.serverIdleTimeout,
+			MaxHeaderBytes:    cfg.serverMaxHeaderBytes,
+			TLSConfig:         cfg.tlsConfig,
+			WriteTimeout:      cfg.serverWriteTimeout,
+			BaseContext:       func(_ net.Listener) context.Context { return baseCtx },
+			ErrorLog:          logutil.NewLogFromSlog(cfg.logger),
+			Protocols:         protocols,
 		},
-		nil
+	}
+
+	h.lc, err = srvlifecycle.New(h.httpServer, listener, cfg.lifecycleOptions()...)
+	if err != nil {
+		_ = listener.Close()
+
+		return nil, fmt.Errorf("failed creating the http server lifecycle: %w", err)
+	}
+
+	// The server holds the router, so the routes loaded here are served.
+	err = loadRoutes(ctx, binder, cfg)
+	if err != nil {
+		// Closes the listener of the never-started server.
+		_ = h.lc.Shutdown(ctx)
+
+		return nil, err
+	}
+
+	return h, nil
 }
 
 // Addr returns the network address the server listener is bound to. It is
 // primarily useful when binding to an ephemeral port (":0") to discover the
 // actual port assigned by the operating system.
 func (h *HTTPServer) Addr() net.Addr {
-	return h.listener.Addr()
+	return h.lc.Addr()
 }
 
 // ServeError returns a channel that receives the error that caused the server
@@ -212,7 +212,7 @@ func (h *HTTPServer) Addr() net.Addr {
 // The channel is buffered (size 1) and never receives a nil value. A server that
 // stops through Shutdown leaves it empty.
 func (h *HTTPServer) ServeError() <-chan error {
-	return h.serveErr
+	return h.lc.ServeError()
 }
 
 // StartServerCtx starts server in background goroutine with context-aware shutdown support.
@@ -225,57 +225,8 @@ func (h *HTTPServer) ServeError() <-chan error {
 // down: this keeps the shutdown wait group balanced (a single Add(1) matched by a
 // single decrement) and avoids serving twice on the same listener. A nil ctx is
 // treated as context.Background().
-//
-//nolint:contextcheck // a nil ctx is deliberately replaced with context.Background()
 func (h *HTTPServer) StartServerCtx(ctx context.Context) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
-	// Register the running server with the wait group synchronously, before any
-	// goroutine (including the shutdown one) can decrement it. The matching
-	// decrement happens exactly once in Shutdown via sync.Once, and only for a
-	// started server (Shutdown on a never-started server must not decrement).
-	h.startedMutex.Lock()
-
-	if h.started || h.stopped {
-		h.startedMutex.Unlock()
-		h.cfg.logger.Warn("start ignored: server already started or shut down")
-
-		return
-	}
-
-	h.started = true
-	h.cfg.shutdownWaitGroup.Add(1)
-	h.startedMutex.Unlock()
-
-	// wait for shutdown signal, direct Shutdown call, or context cancelation
-	go func() { //nolint:gosec
-		defer close(h.monitorDone)
-
-		select {
-		case <-h.cfg.shutdownSignalChan:
-			h.cfg.logger.Debug("shutdown notification received")
-		case <-h.shutdownDone:
-			// Shutdown was already called directly: exit without leaking this goroutine.
-			return
-		case <-ctx.Done():
-			h.cfg.logger.Warn("context canceled")
-		}
-
-		// The shutdown context is independent from the parent context.
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), h.cfg.shutdownTimeout)
-		defer cancel()
-
-		_ = h.Shutdown(shutdownCtx) //nolint:contextcheck
-	}()
-
-	// start server
-	go func() {
-		h.serve()
-	}()
-
-	h.cfg.logger.Info("listening for http requests")
+	h.lc.Start(ctx)
 }
 
 // StartServer starts server in background using context from New().
@@ -288,68 +239,7 @@ func (h *HTTPServer) StartServer() {
 // (e.g. manually and via the internal context/signal goroutine): the wait group
 // is decremented exactly once, and only when the server was actually started.
 func (h *HTTPServer) Shutdown(ctx context.Context) error {
-	h.cfg.logger.Debug("shutting down http server")
-
-	err := h.httpServer.Shutdown(ctx)
-
-	h.shutdownOnce.Do(func() {
-		// Unblock the internal shutdown-monitor goroutine (if any),
-		// so a direct Shutdown call does not leak it.
-		close(h.shutdownDone)
-
-		h.startedMutex.Lock()
-		defer h.startedMutex.Unlock()
-
-		h.stopped = true
-
-		if h.started {
-			h.cfg.shutdownWaitGroup.Add(-1)
-			return
-		}
-
-		// http.Server.Shutdown only closes listeners registered by Serve,
-		// so a never-started server must release its bound listener explicitly.
-		cerr := h.listener.Close()
-		if cerr != nil {
-			h.cfg.logger.With(slog.Any("error", cerr)).Debug("failed closing the http server listener")
-		}
-	})
-
-	if err != nil {
-		h.cfg.logger.With(slog.Any("error", err)).Warn("http server shutdown completed with error")
-
-		return err //nolint:wrapcheck
-	}
-
-	h.cfg.logger.Debug("http server shutdown complete")
-
-	return nil
-}
-
-// serve starts serving HTTP requests. On any failure other than a normal
-// shutdown it releases the wait group and unblocks the monitor goroutine by
-// triggering Shutdown, and surfaces the error on the ServeError channel so the
-// application is not left waiting on a server that has already died.
-func (h *HTTPServer) serve() {
-	err := h.httpServer.Serve(h.listener)
-	if errors.Is(err, http.ErrServerClosed) {
-		h.cfg.logger.Debug("closed http server")
-		return
-	}
-
-	h.cfg.logger.With(slog.Any("error", err)).Error("unexpected http server failure")
-
-	// Non-blocking publish of the failure (buffer size 1, never overwritten).
-	select {
-	case h.serveErr <- err:
-	default:
-	}
-
-	// Ensure the wait group is released and the monitor goroutine unblocked.
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), h.cfg.shutdownTimeout)
-	defer cancel()
-
-	_ = h.Shutdown(shutdownCtx)
+	return h.lc.Shutdown(ctx) //nolint:wrapcheck // the net/http shutdown error is returned as-is
 }
 
 // netListener creates a network listener for the given server address and TLS
