@@ -80,7 +80,7 @@ func RequestInjectHandler(
 
 		ctx := r.Context()
 		ctx = libhttputil.WithRequestTime(ctx, reqTime)
-		ctx = traceid.NewContext(ctx, reqID)
+		ctx = traceid.ForceContext(ctx, reqID)
 
 		// Derive a per-request logger from the shared one. The captured logger
 		// must never be reassigned, otherwise concurrent requests would race on

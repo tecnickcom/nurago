@@ -21,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tecnickcom/nurago/pkg/traceid"
 )
 
 // testBaseURL returns a 127.0.0.1 URL for a server bound to a wildcard
@@ -673,6 +674,84 @@ func TestRequestInjectHandler_responseMetadata(t *testing.T) {
 	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil))
 
 	require.Contains(t, buf.String(), "response_code=200")
+}
+
+func TestRequestInjectHandler_traceIDOverridesContext(t *testing.T) {
+	t.Parallel()
+
+	var buf syncLogBuffer
+
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+	var got string
+
+	next := http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		got = traceid.FromContext(r.Context(), "")
+	})
+
+	handler := RequestInjectHandler(logger, traceid.DefaultHeader, nil, nil, next)
+
+	ctx := traceid.NewContext(t.Context(), "stale-id")
+	req := httptest.NewRequestWithContext(ctx, http.MethodGet, "/", nil)
+	req.Header.Set(traceid.DefaultHeader, "request-id")
+
+	handler.ServeHTTP(httptest.NewRecorder(), req)
+
+	require.Equal(t, "request-id", got, "the request trace ID must replace one already in the context")
+	require.Contains(t, buf.String(), "traceid=request-id")
+}
+
+func TestNew_baseContextTraceIDDoesNotShadowRequestID(t *testing.T) {
+	t.Parallel()
+
+	var buf syncLogBuffer
+
+	logger := slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+	ids := make(chan string, 2)
+
+	binder := &routeBinder{routes: []Route{{
+		Method: http.MethodGet,
+		Path:   "/id",
+		Handler: func(w http.ResponseWriter, r *http.Request) {
+			ids <- traceid.FromContext(r.Context(), "")
+
+			w.WriteHeader(http.StatusOK)
+		},
+	}}}
+
+	// The application context passed to New carries its own trace ID.
+	ctx := traceid.NewContext(t.Context(), "app-id")
+
+	h, err := New(ctx, binder, WithServerAddr("127.0.0.1:0"), WithLogger(logger))
+	require.NoError(t, err)
+
+	h.StartServer()
+
+	t.Cleanup(func() { _ = h.Shutdown(context.WithoutCancel(ctx)) })
+
+	get := func(header string) {
+		req, rerr := http.NewRequestWithContext(t.Context(), http.MethodGet, testBaseURL(t, h)+"/id", nil)
+		require.NoError(t, rerr)
+
+		if header != "" {
+			req.Header.Set(traceid.DefaultHeader, header)
+		}
+
+		resp, rerr := http.DefaultClient.Do(req)
+		require.NoError(t, rerr)
+		require.NoError(t, resp.Body.Close())
+	}
+
+	get("request-id")
+	require.Equal(t, "request-id", <-ids)
+
+	get("")
+
+	generated := <-ids
+	require.NotEqual(t, "app-id", generated, "a generated trace ID must not be shadowed by the application one")
+	require.Len(t, generated, 36)
+	require.Contains(t, buf.String(), `"traceid":"`+generated+`"`, "the handler and the log must agree on the trace ID")
 }
 
 // syncLogBuffer is a mutex-guarded buffer safe for use as an slog output.
