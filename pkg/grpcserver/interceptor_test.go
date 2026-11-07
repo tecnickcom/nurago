@@ -23,7 +23,6 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/tap"
-	"google.golang.org/protobuf/proto"
 )
 
 // withTraceID returns ctx carrying id in the outgoing default trace ID metadata.
@@ -643,32 +642,6 @@ func TestRequestPanic_streamBeforeHandler(t *testing.T) {
 	require.Equal(t, "FullDuplexCall", panics[0]["grpc_method"])
 }
 
-func TestErrorCode(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name string
-		err  error
-		want codes.Code
-	}{
-		{name: "nil", err: nil, want: codes.OK},
-		{name: "status", err: status.Error(codes.NotFound, "x"), want: codes.NotFound},
-		{name: "wrapped status", err: fmt.Errorf("w: %w", status.Error(codes.Aborted, "x")), want: codes.Aborted},
-		{name: "deadline", err: context.DeadlineExceeded, want: codes.DeadlineExceeded},
-		{name: "wrapped deadline", err: fmt.Errorf("w: %w", context.DeadlineExceeded), want: codes.DeadlineExceeded},
-		{name: "canceled", err: context.Canceled, want: codes.Canceled},
-		{name: "other", err: errors.New("x"), want: codes.Unknown},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			require.Equal(t, tt.want, errorCode(tt.err))
-		})
-	}
-}
-
 func TestRequestLogger_contextErrorCode(t *testing.T) {
 	t.Parallel()
 
@@ -956,49 +929,6 @@ func TestMessageSizeLimits(t *testing.T) {
 			_, err = client.UnaryCall(rpcContext(t), &testgrpc.SimpleRequest{})
 			require.NoError(t, err)
 		})
-	}
-}
-
-func TestDumpMessage(t *testing.T) {
-	t.Parallel()
-
-	cfg := defaultConfig()
-	cfg.redactFn = func(b []byte) string { return string(b) }
-	cfg.maxDumpSize = 16
-
-	require.Empty(t, cfg.dumpMessage(nil))
-	require.Empty(t, cfg.dumpMessage("not a proto message"))
-	require.Empty(t, cfg.dumpMessage((*testgrpc.SimpleResponse)(nil)))
-	require.Contains(t, cfg.dumpMessage(&testgrpc.SimpleResponse{Username: "u"}), `"username"`)
-
-	big := &testgrpc.SimpleRequest{Payload: &testgrpc.Payload{Body: make([]byte, 1020)}}
-	require.Equal(t,
-		fmt.Sprintf("[omitted: %d bytes exceeds the dump cap of 16 bytes]", proto.Size(big)),
-		cfg.dumpMessage(big),
-	)
-
-	// protojson rejects strings that are not valid UTF-8.
-	require.Contains(t, cfg.dumpMessage(&testgrpc.SimpleResponse{Username: "\xff"}), "[dump failed: ")
-}
-
-func TestSplitFullMethod(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		in      string
-		service string
-		method  string
-	}{
-		{in: "/pkg.Service/Method", service: "pkg.Service", method: "Method"},
-		{in: "pkg.Service/Method", service: "pkg.Service", method: "Method"},
-		{in: "/malformed", service: "", method: "/malformed"},
-		{in: "", service: "", method: ""},
-	}
-
-	for _, tt := range tests {
-		service, method := splitFullMethod(tt.in)
-		require.Equal(t, tt.service, service, tt.in)
-		require.Equal(t, tt.method, method, tt.in)
 	}
 }
 

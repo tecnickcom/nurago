@@ -99,7 +99,7 @@ keeps only the modules your imports actually reach.
 
 <!-- gendoc:deps:start -->
 
-**41 of the 73 packages reach no external module at all**, using nothing
+**41 of the 74 packages reach no external module at all**, using nothing
 beyond the Go standard library:
 
 `backoff`, `countrycode`, `countryphone`, `decint`, `dnscache`, `encode`,
@@ -138,7 +138,7 @@ Each package also has a page on
 
 <!-- gendoc:catalog:start -->
 
-All 73 packages, each linking to its own README. The description is the
+All 74 packages, each linking to its own README. The description is the
 first sentence of the package documentation.
 
 - [awsopt](pkg/awsopt) - configures the aws-sdk-go-v2 library consistently across multiple AWS service clients. It centralizes config.LoadOptionsFunc calls into a composable Options slice that can be built once and handed to any AWS-based package in this library.
@@ -158,8 +158,9 @@ first sentence of the package documentation.
 - [enumdb](pkg/enumdb) - loads enumeration sets from relational database tables into thread-safe enum caches.
 - [errutil](pkg/errutil) - annotates errors with caller location, joins cleanup failures onto an existing error, and enumerates the errors inside an errors.Join value.
 - [filter](pkg/filter) - provides declarative, rule-based filtering for in-memory slices. It evaluates structured Rule expressions against slice elements and filters the slice in place.
+- [grpcclient](pkg/grpcclient) - builds preconfigured gRPC client connections with trace ID propagation, structured logging, default deadlines, TLS by default, and native gRPC retry policies.
 - [grpcserver](pkg/grpcserver) - provides a configurable gRPC server bootstrap for Go services.
-- [grpcutil](pkg/grpcutil) - provides shared gRPC helpers for trace ID propagation through metadata and for mapping between gRPC status codes and HTTP status codes.
+- [grpcutil](pkg/grpcutil) - provides shared gRPC helpers for trace ID propagation through metadata, for mapping between gRPC status codes and HTTP status codes, and for logging RPCs.
 - [healthcheck](pkg/healthcheck) - runs dependency probes concurrently and aggregates them into a single HTTP health endpoint.
 - [healthrun](pkg/healthcheck/healthrun) - runs dependency probes concurrently and reports the outcome of each one, without any transport dependency.
 - [httpclient](pkg/httpclient) - provides a configurable outbound HTTP client with trace propagation and structured request/response logging.

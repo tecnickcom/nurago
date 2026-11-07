@@ -2,23 +2,17 @@ package grpcserver
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"runtime/debug"
-	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/tecnickcom/nurago/pkg/grpcutil"
 	"github.com/tecnickcom/nurago/pkg/traceid"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
-	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/tap"
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
 )
 
 // RPC type values logged in the grpc_type field.
@@ -164,7 +158,7 @@ func (c *config) unaryRequestInterceptor(
 
 	dbglog := c.logger.Enabled(ctx, slog.LevelDebug)
 	if dbglog {
-		attrs = append(attrs, slog.String("request_dump", c.dumpMessage(req)))
+		attrs = append(attrs, slog.String("request_dump", grpcutil.DumpMessage(req, c.maxDumpSize, c.redactFn)))
 	}
 
 	resp, err = handler(ctx, req)
@@ -173,7 +167,7 @@ func (c *config) unaryRequestInterceptor(
 	attrs = append(attrs, c.responseAttrs(reqTime, err, dbglog)...)
 
 	if dbglog {
-		attrs = append(attrs, slog.String("response_dump", c.dumpMessage(resp)))
+		attrs = append(attrs, slog.String("response_dump", grpcutil.DumpMessage(resp, c.maxDumpSize, c.redactFn)))
 	}
 
 	c.logRequest(ctx, dbglog, attrs)
@@ -311,7 +305,7 @@ func (c *config) recoverPanic(ctx context.Context, fullMethod string, p any) err
 // logPanic logs the panic value p at error level with msg, and with stack when
 // it is not empty. A panic raised by the logger is discarded.
 func (c *config) logPanic(ctx context.Context, fullMethod, msg string, p any, stack string) {
-	service, method := splitFullMethod(fullMethod)
+	service, method := grpcutil.SplitFullMethod(fullMethod)
 
 	attrs := []slog.Attr{
 		slog.String(traceid.DefaultLogKey, traceid.FromContext(ctx, traceid.DefaultValue)),
@@ -386,7 +380,7 @@ func (c *config) methodDeadlineTap(ctx context.Context, info *tap.Info) (context
 
 // requestAttrs returns the request fields of the per-RPC log entry.
 func (c *config) requestAttrs(ctx context.Context, reqID string, reqTime time.Time, fullMethod, rpcType string) []slog.Attr {
-	service, method := splitFullMethod(fullMethod)
+	service, method := grpcutil.SplitFullMethod(fullMethod)
 
 	attrs := make([]slog.Attr, 0, 14)
 
@@ -405,7 +399,7 @@ func (c *config) requestAttrs(ctx context.Context, reqID string, reqTime time.Ti
 // redacted error message is included only at debug level.
 func (c *config) responseAttrs(reqTime time.Time, err error, dbglog bool) []slog.Attr {
 	attrs := []slog.Attr{
-		slog.String("grpc_code", errorCode(err).String()),
+		slog.String("grpc_code", grpcutil.ErrorCode(err).String()),
 		slog.Duration("response_duration", time.Since(reqTime)),
 	}
 
@@ -414,17 +408,6 @@ func (c *config) responseAttrs(reqTime time.Time, err error, dbglog bool) []slog
 	}
 
 	return attrs
-}
-
-// errorCode returns the code the server sends for a handler error: the status
-// code of a gRPC status error, Canceled or DeadlineExceeded for a context
-// error, and Unknown for any other error.
-func errorCode(err error) codes.Code {
-	if st, ok := status.FromError(err); ok {
-		return st.Code()
-	}
-
-	return status.FromContextError(err).Code()
 }
 
 // logRequest writes the per-RPC log entry, at debug level when debug logging
@@ -438,28 +421,6 @@ func (c *config) logRequest(ctx context.Context, dbglog bool, attrs []slog.Attr)
 	c.logger.LogAttrs(ctx, level, logMessage, attrs...)
 }
 
-// dumpMessage returns the redacted protobuf JSON form of m. Messages larger
-// than the dump cap (by encoded size) are omitted. Nil messages and values
-// that are not protobuf messages produce an empty string.
-func (c *config) dumpMessage(m any) string {
-	pm, ok := m.(proto.Message)
-	if !ok || !pm.ProtoReflect().IsValid() {
-		return ""
-	}
-
-	size := proto.Size(pm)
-	if size > c.maxDumpSize {
-		return fmt.Sprintf("[omitted: %d bytes exceeds the dump cap of %d bytes]", size, c.maxDumpSize)
-	}
-
-	b, err := protojson.Marshal(pm)
-	if err != nil {
-		return "[dump failed: " + err.Error() + "]"
-	}
-
-	return c.redactFn(b)
-}
-
 // streamType returns the grpc_type value for a streaming RPC.
 func streamType(info *grpc.StreamServerInfo) string {
 	switch {
@@ -470,17 +431,6 @@ func streamType(info *grpc.StreamServerInfo) string {
 	default:
 		return rpcTypeServerStream
 	}
-}
-
-// splitFullMethod splits "/package.Service/Method" into service and method.
-// A malformed name is returned whole as the method.
-func splitFullMethod(fullMethod string) (string, string) {
-	service, method, ok := strings.Cut(strings.TrimPrefix(fullMethod, "/"), "/")
-	if !ok {
-		return "", fullMethod
-	}
-
-	return service, method
 }
 
 // peerAddr returns the remote address of the RPC peer, or an empty string.

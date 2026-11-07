@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"log/slog"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/tecnickcom/nurago/pkg/grpcutil"
 	"github.com/tecnickcom/nurago/pkg/healthcheck/healthrun"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -273,12 +275,11 @@ func WithHealthService(checks []healthrun.HealthCheck, opts ...HealthOption) Opt
 // lowercased and must pass grpcutil.ValidTraceIDMetadataKey.
 func WithTraceIDMetadataKey(key string) Option {
 	return func(cfg *config) error {
-		k, err := normalizeMetadataKey(key)
-		if err != nil {
-			return err
+		if !grpcutil.ValidTraceIDMetadataKey(key) {
+			return fmt.Errorf("%w: %q", ErrInvalidMetadataKey, key)
 		}
 
-		cfg.traceIDMetadataKey = k
+		cfg.traceIDMetadataKey = strings.ToLower(key)
 
 		return nil
 	}

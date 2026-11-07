@@ -1,6 +1,6 @@
 # nurago
 
-> 73 independent Go packages for backend services. Each is imported on its
+> 74 independent Go packages for backend services. Each is imported on its
 > own and pulls only its own dependencies; 41 reach no external module at all.
 
 Install: `go get github.com/tecnickcom/nurago`
@@ -28,8 +28,9 @@ Reference documentation: https://pkg.go.dev/github.com/tecnickcom/nurago
 - [enumdb](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/enumdb): Package enumdb loads enumeration sets from relational database tables into thread-safe enum caches.
 - [errutil](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/errutil): Package errutil annotates errors with caller location, joins cleanup failures onto an existing error, and enumerates the errors inside an errors.Join value.
 - [filter](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/filter): Package filter provides declarative, rule-based filtering for in-memory slices. It evaluates structured Rule expressions against slice elements and filters the slice in place.
+- [grpcclient](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/grpcclient): Package grpcclient builds preconfigured gRPC client connections with trace ID propagation, structured logging, default deadlines, TLS by default, and native gRPC retry policies.
 - [grpcserver](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/grpcserver): Package grpcserver provides a configurable gRPC server bootstrap for Go services.
-- [grpcutil](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/grpcutil): Package grpcutil provides shared gRPC helpers for trace ID propagation through metadata and for mapping between gRPC status codes and HTTP status codes.
+- [grpcutil](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/grpcutil): Package grpcutil provides shared gRPC helpers for trace ID propagation through metadata, for mapping between gRPC status codes and HTTP status codes, and for logging RPCs.
 - [healthcheck](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/healthcheck): Package healthcheck runs dependency probes concurrently and aggregates them into a single HTTP health endpoint.
 - [healthrun](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/healthcheck/healthrun): Package healthrun runs dependency probes concurrently and reports the outcome of each one, without any transport dependency.
 - [httpclient](https://pkg.go.dev/github.com/tecnickcom/nurago/pkg/httpclient): Package httpclient provides a configurable outbound HTTP client with trace propagation and structured request/response logging.

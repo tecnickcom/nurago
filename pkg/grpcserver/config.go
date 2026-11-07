@@ -8,7 +8,6 @@ import (
 	"math"
 	"net"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -27,7 +26,7 @@ import (
 const defaultMaxDumpSize = 1 << 20 // 1 MiB
 
 // RedactFn redacts sensitive values from logged byte payloads and returns a redacted string.
-type RedactFn func(b []byte) string
+type RedactFn = grpcutil.RedactFn
 
 // PanicHandlerFunc returns the error sent to the client when an RPC handler
 // panics. p is the recovered value. A nil return is replaced with the default
@@ -196,20 +195,9 @@ func validateAddr(addr string) error {
 
 // validateFullMethod checks that name has the "/package.Service/Method" form.
 func validateFullMethod(name string) error {
-	svc, method, ok := strings.Cut(strings.TrimPrefix(name, "/"), "/")
-	if !strings.HasPrefix(name, "/") || !ok || svc == "" || method == "" || strings.Contains(method, "/") {
+	if _, _, ok := grpcutil.ParseFullMethod(name); !ok {
 		return fmt.Errorf("%w: %q", ErrInvalidFullMethod, name)
 	}
 
 	return nil
-}
-
-// normalizeMetadataKey returns key lowercased, or an error when it fails
-// grpcutil.ValidTraceIDMetadataKey.
-func normalizeMetadataKey(key string) (string, error) {
-	if !grpcutil.ValidTraceIDMetadataKey(key) {
-		return "", fmt.Errorf("%w: %q", ErrInvalidMetadataKey, key)
-	}
-
-	return strings.ToLower(key), nil
 }

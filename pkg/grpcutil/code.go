@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // statusClientClosedRequest is the non-standard HTTP status used for a request
@@ -96,4 +97,15 @@ func CodeFromHTTPStatus(status int) codes.Code {
 	default:
 		return codes.Unknown
 	}
+}
+
+// ErrorCode returns the gRPC code of an RPC error: OK for nil, the status code
+// of a gRPC status error (also when wrapped), Canceled or DeadlineExceeded for
+// a context error, and Unknown for any other error.
+func ErrorCode(err error) codes.Code {
+	if st, ok := status.FromError(err); ok {
+		return st.Code()
+	}
+
+	return status.FromContextError(err).Code()
 }

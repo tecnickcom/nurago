@@ -1,11 +1,15 @@
 package grpcutil
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestHTTPStatusFromCode(t *testing.T) {
@@ -105,5 +109,31 @@ func TestCodeFromHTTPStatus_roundTrip(t *testing.T) {
 		codes.Unauthenticated,
 	} {
 		require.Equal(t, code, CodeFromHTTPStatus(HTTPStatusFromCode(code)), code.String())
+	}
+}
+
+func TestErrorCode(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		err  error
+		want codes.Code
+	}{
+		{name: "nil", err: nil, want: codes.OK},
+		{name: "status", err: status.Error(codes.NotFound, "x"), want: codes.NotFound},
+		{name: "wrapped status", err: fmt.Errorf("w: %w", status.Error(codes.Aborted, "x")), want: codes.Aborted},
+		{name: "deadline", err: context.DeadlineExceeded, want: codes.DeadlineExceeded},
+		{name: "wrapped deadline", err: fmt.Errorf("w: %w", context.DeadlineExceeded), want: codes.DeadlineExceeded},
+		{name: "canceled", err: context.Canceled, want: codes.Canceled},
+		{name: "other", err: errors.New("x"), want: codes.Unknown},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			require.Equal(t, tt.want, ErrorCode(tt.err))
+		})
 	}
 }

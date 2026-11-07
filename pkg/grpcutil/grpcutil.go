@@ -1,6 +1,7 @@
 /*
 Package grpcutil provides shared gRPC helpers for trace ID propagation through
-metadata and for mapping between gRPC status codes and HTTP status codes.
+metadata, for mapping between gRPC status codes and HTTP status codes, and for
+logging RPCs.
 
 # Trace ID Propagation
 
@@ -29,6 +30,15 @@ default key interoperates with HTTP services using the same header.
   - [CodeFromHTTPStatus] maps an HTTP status returned by application logic to
     the closest gRPC code, so services exposing both transports report the
     same error classes.
+  - [ErrorCode] returns the gRPC code of an RPC error, including context
+    errors.
+
+# RPC Logging
+
+  - [SplitFullMethod] and [ParseFullMethod] split a "/package.Service/Method"
+    name into service and method. ParseFullMethod also rejects malformed names.
+  - [DumpMessage] renders a protobuf message as JSON for a log entry, capped
+    by encoded size and passed through a [RedactFn].
 
 # When To Use
 
@@ -36,6 +46,7 @@ default key interoperates with HTTP services using the same header.
     it calls or is called by.
   - Application errors classified by HTTP status must be returned over gRPC,
     or the other way around.
+  - A gRPC server or client interceptor logs RPCs.
 */
 package grpcutil
 
