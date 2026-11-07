@@ -99,6 +99,7 @@ func TestRequestInjectHandler_info(t *testing.T) {
 			reqTime, ok := httputil.GetRequestTime(r)
 			assert.True(t, ok)
 			assert.NotEmpty(t, reqTime)
+			assert.Contains(t, reqTime.String(), "m=", "the request time keeps its monotonic clock reading")
 		},
 	)
 

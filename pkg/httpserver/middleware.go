@@ -70,7 +70,9 @@ func RequestInjectHandler(
 	logger, redactFn, rnd = requestInjectDefaults(logger, redactFn, rnd)
 
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		reqTime := time.Now().UTC()
+		// Kept in local time: UTC() would drop the monotonic clock reading
+		// that response durations are measured with.
+		reqTime := time.Now()
 
 		// Only generate a new trace ID when the request does not carry a valid one.
 		reqID := traceid.FromHTTPRequestHeader(r, traceIDHeaderName, "")
@@ -87,7 +89,7 @@ func RequestInjectHandler(
 		// it and cross-attribute log fields.
 		reqLogger := logger.With(
 			slog.String(traceid.DefaultLogKey, reqID),
-			slog.Time("request_time", reqTime),
+			slog.Time("request_time", reqTime.UTC()),
 			slog.String("request_method", r.Method),
 			slog.String("request_path", r.URL.Path),
 			slog.String("request_query", redactFn([]byte(r.URL.RawQuery))),

@@ -258,12 +258,13 @@ func (c *Client) newErrorHandler() errHandler {
 	}
 
 	return func(w http.ResponseWriter, r *http.Request, err error) {
-		resTime := time.Now().UTC()
+		now := time.Now()
+		resTime := now.UTC()
 		ctx := r.Context()
 
 		reqTime, ok := libhttputil.GetRequestTimeFromContext(ctx)
 		if !ok {
-			reqTime = resTime
+			reqTime = now
 		}
 
 		clientGone := ctx.Err() != nil
@@ -290,9 +291,9 @@ func (c *Client) newErrorHandler() errHandler {
 			slog.Int("response_code", code),
 			slog.String("response_message", message),
 			slog.Any("response_status", libhttputil.Status(code)),
-			slog.Time("request_time", reqTime),
+			slog.Time("request_time", reqTime.UTC()),
 			slog.Time("response_time", resTime),
-			slog.Duration("response_duration", resTime.Sub(reqTime)),
+			slog.Duration("response_duration", now.Sub(reqTime)),
 			slog.Any("error", redactErrorForLog(err, redactFn)),
 		)
 

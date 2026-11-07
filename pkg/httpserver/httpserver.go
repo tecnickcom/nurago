@@ -223,8 +223,15 @@ func (h *HTTPServer) ServeError() <-chan error {
 //
 // It is a no-op if the server has already been started or has already been shut
 // down: this keeps the shutdown wait group balanced (a single Add(1) matched by a
-// single decrement) and avoids serving twice on the same listener.
+// single decrement) and avoids serving twice on the same listener. A nil ctx is
+// treated as context.Background().
+//
+//nolint:contextcheck // a nil ctx is deliberately replaced with context.Background()
 func (h *HTTPServer) StartServerCtx(ctx context.Context) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	// Register the running server with the wait group synchronously, before any
 	// goroutine (including the shutdown one) can decrement it. The matching
 	// decrement happens exactly once in Shutdown via sync.Once, and only for a
@@ -264,7 +271,7 @@ func (h *HTTPServer) StartServerCtx(ctx context.Context) {
 	}()
 
 	// start server
-	go func() { //nolint:contextcheck
+	go func() {
 		h.serve()
 	}()
 

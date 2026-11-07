@@ -524,6 +524,32 @@ func TestStartServerCtx_contextAlreadyCanceled(t *testing.T) {
 	}
 }
 
+func TestStartServerCtx_nilContext(t *testing.T) {
+	t.Parallel()
+
+	shutdownWG := &sync.WaitGroup{}
+
+	h, err := New(t.Context(), NopBinder(), WithServerAddr(":0"), WithShutdownWaitGroup(shutdownWG))
+	require.NoError(t, err)
+
+	//nolint:staticcheck // a nil context is the case under test
+	h.StartServerCtx(nil)
+	require.NoError(t, h.Shutdown(t.Context()))
+
+	done := make(chan struct{})
+
+	go func() {
+		shutdownWG.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
+		t.Fatal("shutdownWaitGroup did not reach zero")
+	}
+}
+
 func TestRequestInjectHandler_concurrentLoggerIsolation(t *testing.T) {
 	t.Parallel()
 

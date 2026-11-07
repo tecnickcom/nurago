@@ -319,11 +319,12 @@ func (hr *HTTPResp) logResponse(ctx context.Context, statusCode int, dataKey str
 		return
 	}
 
-	resTime := time.Now().UTC()
+	now := time.Now()
+	resTime := now.UTC()
 
 	reqTime, ok := GetRequestTimeFromContext(ctx)
 	if !ok {
-		reqTime = resTime
+		reqTime = now
 	}
 
 	attrs := []slog.Attr{
@@ -331,7 +332,7 @@ func (hr *HTTPResp) logResponse(ctx context.Context, statusCode int, dataKey str
 		slog.String("response_message", StatusText(statusCode)),
 		slog.Any("response_status", Status(statusCode)),
 		slog.Time("response_time", resTime),
-		slog.Duration("response_duration", resTime.Sub(reqTime)),
+		slog.Duration("response_duration", now.Sub(reqTime)),
 		slog.Any(dataKey, data),
 	}
 
