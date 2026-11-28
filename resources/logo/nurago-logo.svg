@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="nurago-logo-title" aria-describedby="nurago-logo-desc">
+  <title id="nurago-logo-title">nurago</title>
+  <desc id="nurago-logo-desc">Logo of nurago, a collection of independent Go packages for building backend services: https://nurago.org</desc>
+  <metadata>
+    <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/">
+      <rdf:Description rdf:about="https://nurago.org/">
+        <dc:title>nurago</dc:title>
+        <dc:description>Logo of nurago, a collection of independent Go packages for building backend services.</dc:description>
+        <dc:identifier>https://nurago.org/</dc:identifier>
+        <dc:source>https://github.com/tecnickcom/nurago</dc:source>
+        <dc:format>image/svg+xml</dc:format>
+        <dc:creator>Nicola Asuni - Tecnick.com LTD</dc:creator>
+        <dc:rights>Copyright (c) 2026 Nicola Asuni - Tecnick.com LTD. All rights reserved. This logo is not covered by the nurago MIT license. It may be used unmodified to refer to the nurago project.</dc:rights>
+      </rdf:Description>
+    </rdf:RDF>
+  </metadata>
+  <g fill="#00ADD8">
+    <rect x="14" y="14" width="228" height="228" rx="52" fill="none" stroke="#00ADD8" stroke-width="16"/>
+    <circle cx="66" cy="66" r="28"/>
+    <circle cx="190" cy="66" r="28"/>
+    <circle cx="66" cy="190" r="28"/>
+    <circle cx="190" cy="190" r="28"/>
+    <rect x="57" y="105" width="18" height="46" rx="3"/>
+    <rect x="181" y="105" width="18" height="46" rx="3"/>
+    <rect x="79.32" y="119" width="97.36" height="18" rx="3" transform="rotate(45 128 128)"/>
+  </g>
+</svg>

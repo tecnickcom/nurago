@@ -15,7 +15,7 @@ require (
 	github.com/spf13/pflag v1.1.0
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.12.1
-	github.com/tecnickcom/nurago v1.157.2
+	github.com/tecnickcom/nurago v1.157.3
 	google.golang.org/grpc v1.85.0
 	google.golang.org/protobuf v1.36.12
 )

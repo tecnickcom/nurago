@@ -1,4 +1,4 @@
-# nurago
+# <img src="resources/logo/nurago-logo.svg" alt="" width="36" height="36" align="top"> nurago
 
 > [!IMPORTANT]
 > **This project was previously named [gogen](https://github.com/tecnickcom/gogen)**: same library, same packages, new name. The old `github.com/tecnickcom/gogen` module path is **deprecated**; all existing versions remain available via the Go module proxy. To migrate:
